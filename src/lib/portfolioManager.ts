@@ -24,16 +24,23 @@ export function openPositionForMarket(
     return { portfolio: currentPortfolio, success: false, message: `${signal.sector} sektöründen zaten ${sameSectorCount} açık pozisyon var.` };
   }
 
-  // 4. Position Sizing: Risk per trade = 3.5% of total equity
+  // 4. SMART POSITION SIZING:
+  // - Rule A: Risk per trade = 3.5% of total equity
   const riskAmount = portfolio.totalEquity * (portfolio.riskPerTradePct / 100);
   const riskPerShare = Math.max(0.1, signal.suggestedEntry - signal.stopLoss);
-  let shares = Math.floor(riskAmount / riskPerShare);
+  let sharesFromRisk = Math.floor(riskAmount / riskPerShare);
 
+  // - Rule B: MAX CAPITAL ALLOCATION PER POSITION (Never put more than 20-25% of total equity into 1 single stock!)
+  // For 10.000 TL => Max ~2.000 TL per position so you can buy 5-8 different stocks!
+  const maxCapitalPerPosition = Math.max(signal.suggestedEntry, portfolio.totalEquity * 0.22);
+  const sharesFromCapitalCap = Math.floor(maxCapitalPerPosition / signal.suggestedEntry);
+
+  let shares = Math.min(sharesFromRisk, sharesFromCapitalCap);
   if (shares <= 0) shares = 1;
 
   let totalCost = shares * signal.suggestedEntry;
 
-  // Scale down if exceeds available cash
+  // - Rule C: Scale down if exceeds available cash
   if (totalCost > portfolio.cash) {
     shares = Math.floor(portfolio.cash / signal.suggestedEntry);
     totalCost = shares * signal.suggestedEntry;
@@ -84,7 +91,7 @@ export function openPositionForMarket(
   return {
     portfolio,
     success: true,
-    message: `${shares} adet ${signal.displayTicker} (${signal.market}) ${currSign}${signal.suggestedEntry.toFixed(2)} fiyattan alındı (Stop: ${currSign}${signal.stopLoss}, TP1: ${currSign}${signal.target1}, TP2: ${currSign}${signal.target2}).`
+    message: `${shares} adet ${signal.displayTicker} (${signal.market}) ${currSign}${signal.suggestedEntry.toFixed(2)} fiyattan alındı (Tutar: ${currSign}${totalCost.toFixed(2)}).`
   };
 }
 
