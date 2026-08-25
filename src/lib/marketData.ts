@@ -1,38 +1,67 @@
-import { Candle, StockScanResult, TechnicalIndicators } from './types';
+import { Candle, CurrencyType, MarketType, StockScanResult, TechnicalIndicators } from './types';
 import { evaluateSignal } from './strategyEngine';
 
-export const STOCK_UNIVERSE = [
-  { ticker: 'NVDA', name: 'NVIDIA Corporation' },
-  { ticker: 'TSLA', name: 'Tesla, Inc.' },
-  { ticker: 'AAPL', name: 'Apple Inc.' },
-  { ticker: 'MSFT', name: 'Microsoft Corporation' },
-  { ticker: 'AMZN', name: 'Amazon.com, Inc.' },
-  { ticker: 'META', name: 'Meta Platforms, Inc.' },
-  { ticker: 'GOOGL', name: 'Alphabet Inc.' },
-  { ticker: 'AMD', name: 'Advanced Micro Devices' },
-  { ticker: 'AVGO', name: 'Broadcom Inc.' },
-  { ticker: 'NFLX', name: 'Netflix, Inc.' },
-  { ticker: 'PLTR', name: 'Palantir Technologies' },
-  { ticker: 'COIN', name: 'Coinbase Global, Inc.' },
-  { ticker: 'ARM', name: 'Arm Holdings plc' },
-  { ticker: 'SMCI', name: 'Super Micro Computer' },
-  { ticker: 'HOOD', name: 'Robinhood Markets' },
-  { ticker: 'UBER', name: 'Uber Technologies' },
-  { ticker: 'CRWD', name: 'CrowdStrike Holdings' },
-  { ticker: 'PANW', name: 'Palo Alto Networks' },
-  { ticker: 'MSTR', name: 'MicroStrategy Inc.' },
-  { ticker: 'SHOP', name: 'Shopify Inc.' },
-  { ticker: 'MU', name: 'Micron Technology' },
-  { ticker: 'INTC', name: 'Intel Corporation' },
-  { ticker: 'SOFI', name: 'SoFi Technologies' },
-  { ticker: 'MARA', name: 'MARA Holdings, Inc.' },
-  { ticker: 'DKNG', name: 'DraftKings Inc.' },
-  { ticker: 'APP', name: 'AppLovin Corporation' },
-  { ticker: 'AFRM', name: 'Affirm Holdings' },
-  { ticker: 'QQQ', name: 'Invesco QQQ Trust' },
-  { ticker: 'SPY', name: 'SPDR S&P 500 ETF' },
-  { ticker: 'IWM', name: 'iShares Russell 2000' }
+export interface UniverseItem {
+  ticker: string;
+  displayTicker: string;
+  name: string;
+  market: MarketType;
+  currency: CurrencyType;
+}
+
+export const US_UNIVERSE: UniverseItem[] = [
+  { ticker: 'NVDA', displayTicker: 'NVDA', name: 'NVIDIA Corporation', market: 'US', currency: 'USD' },
+  { ticker: 'TSLA', displayTicker: 'TSLA', name: 'Tesla, Inc.', market: 'US', currency: 'USD' },
+  { ticker: 'AAPL', displayTicker: 'AAPL', name: 'Apple Inc.', market: 'US', currency: 'USD' },
+  { ticker: 'MSFT', displayTicker: 'MSFT', name: 'Microsoft Corporation', market: 'US', currency: 'USD' },
+  { ticker: 'AMZN', displayTicker: 'AMZN', name: 'Amazon.com, Inc.', market: 'US', currency: 'USD' },
+  { ticker: 'META', displayTicker: 'META', name: 'Meta Platforms, Inc.', market: 'US', currency: 'USD' },
+  { ticker: 'GOOGL', displayTicker: 'GOOGL', name: 'Alphabet Inc.', market: 'US', currency: 'USD' },
+  { ticker: 'AMD', displayTicker: 'AMD', name: 'Advanced Micro Devices', market: 'US', currency: 'USD' },
+  { ticker: 'AVGO', displayTicker: 'AVGO', name: 'Broadcom Inc.', market: 'US', currency: 'USD' },
+  { ticker: 'NFLX', displayTicker: 'NFLX', name: 'Netflix, Inc.', market: 'US', currency: 'USD' },
+  { ticker: 'PLTR', displayTicker: 'PLTR', name: 'Palantir Technologies', market: 'US', currency: 'USD' },
+  { ticker: 'COIN', displayTicker: 'COIN', name: 'Coinbase Global', market: 'US', currency: 'USD' },
+  { ticker: 'ARM', displayTicker: 'ARM', name: 'Arm Holdings plc', market: 'US', currency: 'USD' },
+  { ticker: 'SMCI', displayTicker: 'SMCI', name: 'Super Micro Computer', market: 'US', currency: 'USD' },
+  { ticker: 'HOOD', displayTicker: 'HOOD', name: 'Robinhood Markets', market: 'US', currency: 'USD' },
+  { ticker: 'UBER', displayTicker: 'UBER', name: 'Uber Technologies', market: 'US', currency: 'USD' },
+  { ticker: 'MSTR', displayTicker: 'MSTR', name: 'MicroStrategy Inc.', market: 'US', currency: 'USD' },
+  { ticker: 'SHOP', displayTicker: 'SHOP', name: 'Shopify Inc.', market: 'US', currency: 'USD' },
+  { ticker: 'MU', displayTicker: 'MU', name: 'Micron Technology', market: 'US', currency: 'USD' },
+  { ticker: 'SOFI', displayTicker: 'SOFI', name: 'SoFi Technologies', market: 'US', currency: 'USD' },
+  { ticker: 'QQQ', displayTicker: 'QQQ', name: 'Invesco QQQ Trust', market: 'US', currency: 'USD' },
+  { ticker: 'SPY', displayTicker: 'SPY', name: 'SPDR S&P 500 ETF', market: 'US', currency: 'USD' }
 ];
+
+export const BIST_UNIVERSE: UniverseItem[] = [
+  { ticker: 'THYAO.IS', displayTicker: 'THYAO', name: 'Türk Hava Yolları', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ASELS.IS', displayTicker: 'ASELS', name: 'Aselsan Elektronik', market: 'BIST', currency: 'TRY' },
+  { ticker: 'GARAN.IS', displayTicker: 'GARAN', name: 'Garanti BBVA', market: 'BIST', currency: 'TRY' },
+  { ticker: 'EREGL.IS', displayTicker: 'EREGL', name: 'Ereğli Demir Çelik', market: 'BIST', currency: 'TRY' },
+  { ticker: 'TUPRS.IS', displayTicker: 'TUPRS', name: 'Tüpraş Rafinerileri', market: 'BIST', currency: 'TRY' },
+  { ticker: 'BIMAS.IS', displayTicker: 'BIMAS', name: 'BİM Birleşik Mağazalar', market: 'BIST', currency: 'TRY' },
+  { ticker: 'KCHOL.IS', displayTicker: 'KCHOL', name: 'Koç Holding', market: 'BIST', currency: 'TRY' },
+  { ticker: 'AKBNK.IS', displayTicker: 'AKBNK', name: 'Akbank T.A.Ş.', market: 'BIST', currency: 'TRY' },
+  { ticker: 'YKBNK.IS', displayTicker: 'YKBNK', name: 'Yapı ve Kredi Bankası', market: 'BIST', currency: 'TRY' },
+  { ticker: 'SISE.IS', displayTicker: 'SISE', name: 'Şişecam', market: 'BIST', currency: 'TRY' },
+  { ticker: 'PGSUS.IS', displayTicker: 'PGSUS', name: 'Pegasus Hava Taşımacılığı', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ENKAI.IS', displayTicker: 'ENKAI', name: 'Enka İnşaat', market: 'BIST', currency: 'TRY' },
+  { ticker: 'FROTO.IS', displayTicker: 'FROTO', name: 'Ford Otosan', market: 'BIST', currency: 'TRY' },
+  { ticker: 'TOASO.IS', displayTicker: 'TOASO', name: 'Tofaş Türk Otomobil', market: 'BIST', currency: 'TRY' },
+  { ticker: 'PETKM.IS', displayTicker: 'PETKM', name: 'Petkim Petrokimya', market: 'BIST', currency: 'TRY' },
+  { ticker: 'SAHOL.IS', displayTicker: 'SAHOL', name: 'Sabancı Holding', market: 'BIST', currency: 'TRY' },
+  { ticker: 'EKGYO.IS', displayTicker: 'EKGYO', name: 'Emlak Konut GYO', market: 'BIST', currency: 'TRY' },
+  { ticker: 'KOZAL.IS', displayTicker: 'KOZAL', name: 'Koza Altın İşletmeleri', market: 'BIST', currency: 'TRY' },
+  { ticker: 'TTKOM.IS', displayTicker: 'TTKOM', name: 'Türk Telekom', market: 'BIST', currency: 'TRY' },
+  { ticker: 'TCELL.IS', displayTicker: 'TCELL', name: 'Turkcell İletişim', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ISCTR.IS', displayTicker: 'ISCTR', name: 'İş Bankası (C)', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ASTOR.IS', displayTicker: 'ASTOR', name: 'Astor Enerji', market: 'BIST', currency: 'TRY' },
+  { ticker: 'MGROS.IS', displayTicker: 'MGROS', name: 'Migros Ticaret', market: 'BIST', currency: 'TRY' },
+  { ticker: 'TAVHL.IS', displayTicker: 'TAVHL', name: 'TAV Havalimanları', market: 'BIST', currency: 'TRY' }
+];
+
+export const COMBINED_UNIVERSE = [...US_UNIVERSE, ...BIST_UNIVERSE];
 
 export async function fetchStockCandles(ticker: string, range: string = '6mo'): Promise<Candle[]> {
   try {
@@ -41,7 +70,7 @@ export async function fetchStockCandles(ticker: string, range: string = '6mo'): 
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       },
-      next: { revalidate: 300 } // cache for 5 minutes
+      next: { revalidate: 300 }
     });
 
     if (!res.ok) {
@@ -74,10 +103,10 @@ export async function fetchStockCandles(ticker: string, range: string = '6mo'): 
         const dateStr = new Date(timestamps[i] * 1000).toISOString().split('T')[0];
         candles.push({
           date: dateStr,
-          open: Number(opens[i].toFixed(2)),
-          high: Number(highs[i].toFixed(2)),
-          low: Number(lows[i].toFixed(2)),
-          close: Number(closes[i].toFixed(2)),
+          open: Number(Number(opens[i]).toFixed(2)),
+          high: Number(Number(highs[i]).toFixed(2)),
+          low: Number(Number(lows[i]).toFixed(2)),
+          close: Number(Number(closes[i]).toFixed(2)),
           volume: Number(volumes[i] || 0)
         });
       }
@@ -95,7 +124,6 @@ export function calculateEMA(data: number[], period: number): number[] {
   const k = 2 / (period + 1);
   const emaArray: number[] = new Array(data.length);
   
-  // Seed with SMA
   let initialSum = 0;
   const seedPeriod = Math.min(period, data.length);
   for (let i = 0; i < seedPeriod; i++) {
@@ -158,7 +186,7 @@ export function calculateATR(candles: Candle[], period: number = 14): number {
 }
 
 export function calculateTechnicals(candles: Candle[]): TechnicalIndicators | null {
-  if (candles.length < 50) return null;
+  if (candles.length < 40) return null;
 
   const closes = candles.map(c => c.close);
   const volumes = candles.map(c => c.volume);
@@ -184,14 +212,12 @@ export function calculateTechnicals(candles: Candle[]): TechnicalIndicators | nu
   const atr14 = calculateATR(candles, 14);
   const atrPercent = Number(((atr14 / price) * 100).toFixed(2));
 
-  // 20-day Volume Average
   const recentVols = volumes.slice(-21, -1);
   const avgVolume20 = Math.round(
     recentVols.reduce((sum, v) => sum + v, 0) / Math.max(recentVols.length, 1)
   );
   const rvol = avgVolume20 > 0 ? Number((latestCandle.volume / avgVolume20).toFixed(2)) : 1.0;
 
-  // 20-day High/Low
   const recentHighs = candles.slice(-21, -1).map(c => c.high);
   const recentLows = candles.slice(-21, -1).map(c => c.low);
   const high20 = Number(Math.max(...recentHighs).toFixed(2));
@@ -216,22 +242,30 @@ export function calculateTechnicals(candles: Candle[]): TechnicalIndicators | nu
   };
 }
 
-export async function scanUniverse(): Promise<StockScanResult[]> {
-  const results: StockScanResult[] = [];
+export async function scanUniverse(marketFilter: 'ALL' | 'US' | 'BIST' = 'ALL'): Promise<StockScanResult[]> {
+  const targetUniverse = marketFilter === 'US' 
+    ? US_UNIVERSE 
+    : marketFilter === 'BIST' 
+    ? BIST_UNIVERSE 
+    : COMBINED_UNIVERSE;
 
-  // Batch process universe with parallel chunks to avoid throttling
-  const chunkSize = 6;
-  for (let i = 0; i < STOCK_UNIVERSE.length; i += chunkSize) {
-    const chunk = STOCK_UNIVERSE.slice(i, i + chunkSize);
+  const results: StockScanResult[] = [];
+  const chunkSize = 8;
+
+  for (let i = 0; i < targetUniverse.length; i += chunkSize) {
+    const chunk = targetUniverse.slice(i, i + chunkSize);
     const promises = chunk.map(async (item) => {
       const candles = await fetchStockCandles(item.ticker, '6mo');
       const technicals = calculateTechnicals(candles);
       if (!technicals) return null;
 
-      const signal = evaluateSignal(item.ticker, technicals, candles);
+      const signal = evaluateSignal(item.ticker, item.displayTicker, item.market, item.currency, technicals, candles);
       return {
         ticker: item.ticker,
+        displayTicker: item.displayTicker,
         name: item.name,
+        market: item.market,
+        currency: item.currency,
         technicals,
         signal
       };

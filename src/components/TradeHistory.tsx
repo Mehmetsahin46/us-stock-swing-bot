@@ -18,7 +18,6 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ history }) => {
   }
 
   const winningCount = history.filter(h => h.realizedPnL > 0).length;
-  const losingCount = history.filter(h => h.realizedPnL <= 0).length;
   const totalPnL = history.reduce((sum, h) => sum + h.realizedPnL, 0);
 
   return (
@@ -36,13 +35,13 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ history }) => {
 
         <div className="flex items-center gap-4 text-xs">
           <div>
-            <span className="text-muted">Kazanma:</span>{' '}
+            <span className="text-muted">Kazanma Oranı:</span>{' '}
             <span className="font-bold text-primary-400">%{((winningCount / history.length) * 100).toFixed(1)}</span>
           </div>
           <div>
             <span className="text-muted">Net K/Z:</span>{' '}
             <span className={`font-bold ${totalPnL >= 0 ? 'text-primary-400' : 'text-danger-400'}`}>
-              {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
+              {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)}
             </span>
           </div>
         </div>
@@ -52,10 +51,10 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ history }) => {
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="border-b border-border/80 bg-surface/50 text-muted font-medium">
-              <th className="py-3 px-4">Hisse & Strateji</th>
+              <th className="py-3 px-4">Hisse & Piyasa</th>
               <th className="py-3 px-4">Tarihler</th>
               <th className="py-3 px-4">Süre</th>
-              <th className="py-3 px-4">Giriş / Çıkış Fiyatı</th>
+              <th className="py-3 px-4">Giriş / Çıkış</th>
               <th className="py-3 px-4">Sonuç (PnL)</th>
               <th className="py-3 px-4">Kapanış Nedeni</th>
             </tr>
@@ -63,11 +62,19 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ history }) => {
           <tbody className="divide-y divide-border/50">
             {history.map((trade) => {
               const isWin = trade.realizedPnL > 0;
+              const currSign = trade.currency === 'TRY' ? '₺' : '$';
 
               return (
                 <tr key={trade.id} className="hover:bg-slate-800/40 transition-colors">
                   <td className="py-3 px-4">
-                    <div className="font-bold text-white text-sm">{trade.ticker}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-white text-sm">{trade.displayTicker}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
+                        trade.market === 'BIST' ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                      }`}>
+                        {trade.market === 'BIST' ? '🇹🇷 BIST' : '🇺🇸 US'}
+                      </span>
+                    </div>
                     <div className="text-[11px] text-muted">{trade.strategyName}</div>
                   </td>
 
@@ -84,14 +91,16 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ history }) => {
                   </td>
 
                   <td className="py-3 px-4">
-                    <div className="text-white font-medium">${trade.entryPrice.toFixed(2)} ➔ ${(trade.exitPrice || trade.currentPrice).toFixed(2)}</div>
+                    <div className="text-white font-medium">
+                      {currSign}{trade.entryPrice.toFixed(2)} ➔ {currSign}{(trade.exitPrice || trade.currentPrice).toFixed(2)}
+                    </div>
                     <div className="text-[11px] text-muted">{trade.shares} Lot</div>
                   </td>
 
                   <td className="py-3 px-4">
                     <div className={`font-bold flex items-center gap-1 ${isWin ? 'text-primary-400' : 'text-danger-400'}`}>
                       {isWin ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5 text-danger-400" />}
-                      <span>{isWin ? '+' : ''}${trade.realizedPnL.toFixed(2)}</span>
+                      <span>{isWin ? '+' : ''}{currSign}{trade.realizedPnL.toFixed(2)}</span>
                       <span className="text-[11px]">({isWin ? '+' : ''}{trade.realizedPnLPct}%)</span>
                     </div>
                   </td>

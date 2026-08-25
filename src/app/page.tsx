@@ -23,7 +23,7 @@ import {
 } from '@/lib/portfolioManager';
 import { LayoutDashboard, Radio, History, PlayCircle } from 'lucide-react';
 
-const STORAGE_KEY = 'us_stock_swing_portfolio_state_v1';
+const STORAGE_KEY = 'global_stock_swing_portfolio_state_v2';
 
 export default function HomePage() {
   const [state, setState] = useState<PortfolioState>(INITIAL_PORTFOLIO_STATE);
@@ -60,7 +60,7 @@ export default function HomePage() {
   async function handleScanMarket() {
     setIsScanning(true);
     try {
-      const res = await fetch('/api/market/scan');
+      const res = await fetch('/api/market/scan?market=ALL');
       const data = await res.json();
 
       if (data.success && data.data) {
@@ -91,8 +91,8 @@ export default function HomePage() {
         setState({ ...updatedState });
         showToast(
           events.length > 0 
-            ? `${data.data.length} hisse güncellendi. ${events.join(' | ')}`
-            : `${data.data.length} hisse güncellendi ve seviyeler kontrol edildi.`
+            ? `ABD & BIST (${data.data.length} hisse) güncellendi. ${events.join(' | ')}`
+            : `ABD & BIST (${data.data.length} hisse) güncellendi ve teknik seviyeler kontrol edildi.`
         );
       }
     } catch (err) {
@@ -244,9 +244,10 @@ export default function HomePage() {
                 <div className="p-4 rounded-xl bg-card border border-border text-xs space-y-2.5">
                   <h3 className="font-semibold text-white">📌 1-14 Gün Swing Kuralları</h3>
                   <ul className="text-muted space-y-1.5 list-disc pl-4 text-[11px]">
+                    <li>ABD Borsası (NYSE/NASDAQ) ve Borsa İstanbul (BIST 30) hisselerini kapsar.</li>
                     <li>İşlem başına maksimum %{state.settings.riskPerTradePct} sermaye riski.</li>
                     <li>Stop-Loss veya Hedef 2 seviyesine ulaşıldığında pozisyon otomatik kapanır.</li>
-                    <li>{state.settings.maxHoldingDays} gün içinde hedefe varmayan işlemler süre dolumuyla piyasa fiyatından kapatılır.</li>
+                    <li>{state.settings.maxHoldingDays} gün içinde hedefe varmayan işlemler süre dolumuyla kapatılır.</li>
                   </ul>
                 </div>
               </div>

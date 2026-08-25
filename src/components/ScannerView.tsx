@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { StockScanResult, Signal } from '@/lib/types';
+import React, { useState } from 'react';
+import { StockScanResult, Signal, MarketType } from '@/lib/types';
 import { TrendingUp, Flame, ShoppingCart, Check } from 'lucide-react';
 
 interface ScannerViewProps {
@@ -15,23 +15,49 @@ export const ScannerView: React.FC<ScannerViewProps> = ({
   onOpenTrade,
   openPositionTickers
 }) => {
+  const [selectedMarket, setSelectedMarket] = useState<'ALL' | MarketType>('ALL');
+
+  const filteredResults = results.filter(r => {
+    if (selectedMarket === 'ALL') return true;
+    return r.market === selectedMarket;
+  });
+
   if (results.length === 0) {
     return (
       <div className="p-8 rounded-xl bg-card border border-border text-center text-muted">
-        Piyasa verisi yükleniyor veya taranmadı. Üst menüdeki "Piyasayı Tara" butonuna tıklayabilirsiniz.
+        Piyasa verisi yükleniyor veya taranmadı. Üst menüdeki "Piyasaları Tara" butonuna tıklayabilirsiniz.
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-white">Canlı ABD Piyasa Tarayıcısı</h2>
-          <p className="text-xs text-muted">S&P 500 ve Nasdaq en likit 30 hissede 1-14 günlük swing formasyonları</p>
+          <h2 className="text-sm font-semibold text-white">Canlı Piyasa Tarayıcısı</h2>
+          <p className="text-xs text-muted">ABD (NYSE/NASDAQ) ve Borsa İstanbul (BIST 30) likit hisselerinde swing fırsatları</p>
         </div>
-        <div className="text-xs text-muted">
-          Toplam <span className="font-semibold text-white">{results.length}</span> hisse taranıyor
+
+        {/* Market Filter Pills */}
+        <div className="flex items-center bg-card border border-border rounded-lg p-1 text-xs">
+          <button
+            onClick={() => setSelectedMarket('ALL')}
+            className={`px-3 py-1 rounded-md font-medium transition-colors ${selectedMarket === 'ALL' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            Tüm Piyasalar ({results.length})
+          </button>
+          <button
+            onClick={() => setSelectedMarket('BIST')}
+            className={`px-3 py-1 rounded-md font-medium transition-colors ${selectedMarket === 'BIST' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            🇹🇷 BIST 30 ({results.filter(r => r.market === 'BIST').length})
+          </button>
+          <button
+            onClick={() => setSelectedMarket('US')}
+            className={`px-3 py-1 rounded-md font-medium transition-colors ${selectedMarket === 'US' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            🇺🇸 ABD Borsası ({results.filter(r => r.market === 'US').length})
+          </button>
         </div>
       </div>
 
@@ -39,7 +65,7 @@ export const ScannerView: React.FC<ScannerViewProps> = ({
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="border-b border-border/80 bg-surface/50 text-muted font-medium">
-              <th className="py-3 px-4">Hisse</th>
+              <th className="py-3 px-4">Hisse & Piyasa</th>
               <th className="py-3 px-4">Fiyat / Günlük %</th>
               <th className="py-3 px-4">RSI (14)</th>
               <th className="py-3 px-4">EMA Durumu</th>
@@ -49,19 +75,29 @@ export const ScannerView: React.FC<ScannerViewProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-border/50">
-            {results.map(({ ticker, name, technicals, signal }) => {
+            {filteredResults.map(({ ticker, displayTicker, name, market, currency, technicals, signal }) => {
               const isOpen = openPositionTickers.includes(ticker);
               const isGreen = technicals.changePercent >= 0;
+              const currSign = currency === 'TRY' ? '₺' : '$';
 
               return (
                 <tr key={ticker} className="hover:bg-slate-800/40 transition-colors">
                   <td className="py-3 px-4">
-                    <div className="font-bold text-white text-sm">{ticker}</div>
-                    <div className="text-[11px] text-muted truncate max-w-[140px]">{name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-white text-sm">{displayTicker}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
+                        market === 'BIST' 
+                          ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+                          : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                      }`}>
+                        {market === 'BIST' ? '🇹🇷 BIST' : '🇺🇸 US'}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-muted truncate max-w-[150px]">{name}</div>
                   </td>
 
                   <td className="py-3 px-4">
-                    <div className="font-semibold text-white">${technicals.price.toFixed(2)}</div>
+                    <div className="font-semibold text-white">{currSign}{technicals.price.toFixed(2)}</div>
                     <div className={`text-[11px] font-medium ${isGreen ? 'text-primary-400' : 'text-danger-400'}`}>
                       {isGreen ? '+' : ''}{technicals.changePercent}%
                     </div>
@@ -87,13 +123,13 @@ export const ScannerView: React.FC<ScannerViewProps> = ({
                   <td className="py-3 px-4">
                     <div className="text-[11px]">
                       {technicals.price > technicals.ema20 ? (
-                        <span className="text-primary-400 font-medium">EMA 20 Üstü (${technicals.ema20})</span>
+                        <span className="text-primary-400 font-medium">EMA 20 Üstü ({currSign}{technicals.ema20})</span>
                       ) : (
-                        <span className="text-slate-400">EMA 20 Altı (${technicals.ema20})</span>
+                        <span className="text-slate-400">EMA 20 Altı ({currSign}{technicals.ema20})</span>
                       )}
                     </div>
                     <div className="text-[10px] text-muted">
-                      50 EMA: ${technicals.ema50}
+                      50 EMA: {currSign}{technicals.ema50}
                     </div>
                   </td>
 
@@ -120,7 +156,7 @@ export const ScannerView: React.FC<ScannerViewProps> = ({
                           {signal.strategyName}
                         </span>
                         <div className="text-[10px] text-muted mt-0.5">
-                          Stop: ${signal.stopLoss} | Hedef: ${signal.target2}
+                          Stop: {currSign}{signal.stopLoss} | Hedef: {currSign}{signal.target2}
                         </div>
                       </div>
                     ) : (

@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { BacktestResult } from '@/lib/types';
+import { BacktestResult, MarketType } from '@/lib/types';
 import { Play } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
 export const BacktestView: React.FC = () => {
+  const [market, setMarket] = useState<'ALL' | MarketType>('ALL');
   const [periodMonths, setPeriodMonths] = useState<number>(6);
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<BacktestResult | null>(null);
@@ -17,8 +18,9 @@ export const BacktestView: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          market,
           periodMonths,
-          initialBalance: 10000,
+          initialBalance: 100000,
           riskPerTradePct: 2.0,
           maxHoldingDays: 14
         })
@@ -40,36 +42,59 @@ export const BacktestView: React.FC = () => {
         <div>
           <h2 className="text-sm font-semibold text-white">Geçmişe Dönük Strateji Testi (Backtester)</h2>
           <p className="text-xs text-muted mt-0.5">
-            Botun 1-14 günlük Swing algoritmalarını geçmiş gerçek ABD borsa verileri üzerinde test edin.
+            1-14 günlük Swing algoritmalarını BIST ve ABD hisseleri üzerinde test edin.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Market Selector */}
+          <div className="flex items-center bg-surface border border-border rounded-lg p-1 text-xs">
+            <button
+              onClick={() => setMarket('ALL')}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${market === 'ALL' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+              Tüm Piyasalar
+            </button>
+            <button
+              onClick={() => setMarket('BIST')}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${market === 'BIST' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+              🇹🇷 BIST
+            </button>
+            <button
+              onClick={() => setMarket('US')}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${market === 'US' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+              🇺🇸 ABD
+            </button>
+          </div>
+
+          {/* Timeframe Selector */}
           <div className="flex items-center bg-surface border border-border rounded-lg p-1 text-xs">
             <button
               onClick={() => setPeriodMonths(3)}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${periodMonths === 3 ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${periodMonths === 3 ? 'bg-accent-500 text-white' : 'text-slate-400 hover:text-white'}`}
             >
-              Son 3 Ay
+              3 Ay
             </button>
             <button
               onClick={() => setPeriodMonths(6)}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${periodMonths === 6 ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${periodMonths === 6 ? 'bg-accent-500 text-white' : 'text-slate-400 hover:text-white'}`}
             >
-              Son 6 Ay
+              6 Ay
             </button>
             <button
               onClick={() => setPeriodMonths(12)}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${periodMonths === 12 ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${periodMonths === 12 ? 'bg-accent-500 text-white' : 'text-slate-400 hover:text-white'}`}
             >
-              Son 1 Yıl
+              1 Yıl
             </button>
           </div>
 
           <button
             onClick={handleRunBacktest}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-500 hover:bg-accent-600 disabled:opacity-50 text-white text-xs font-semibold shadow-md shadow-accent-500/20 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
           >
             <Play className={`w-3.5 h-3.5 ${loading ? 'animate-pulse' : ''}`} />
             <span>{loading ? 'Simüle Ediliyor...' : 'Backtest Çalıştır'}</span>
@@ -124,23 +149,23 @@ export const BacktestView: React.FC = () => {
           </div>
 
           <div className="p-5 rounded-xl bg-card border border-border">
-            <h3 className="text-xs font-semibold text-white mb-3">Simüle Edilen Sermaye Eğrisi ($)</h3>
+            <h3 className="text-xs font-semibold text-white mb-3">Simüle Edilen Sermaye Eğrisi (Bakiye)</h3>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={result.equityCurve}>
                   <defs>
                     <linearGradient id="backtestGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.0} />
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="date" stroke="#64748b" fontSize={11} tickLine={false} />
                   <YAxis stroke="#64748b" fontSize={11} tickLine={false} domain={['auto', 'auto']} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', fontSize: '12px' }}
-                    formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Sermaye']}
+                    formatter={(value: any) => [`${Number(value).toFixed(2)}`, 'Sermaye']}
                   />
-                  <Area type="monotone" dataKey="equity" stroke="#0ea5e9" strokeWidth={2} fillOpacity={1} fill="url(#backtestGradient)" />
+                  <Area type="monotone" dataKey="equity" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#backtestGradient)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

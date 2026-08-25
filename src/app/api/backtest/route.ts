@@ -8,8 +8,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const params: BacktestParams = {
+      market: body.market || 'ALL',
       periodMonths: Number(body.periodMonths) || 6,
-      initialBalance: Number(body.initialBalance) || 10000,
+      initialBalance: Number(body.initialBalance) || 100000,
       riskPerTradePct: Number(body.riskPerTradePct) || 2.0,
       maxHoldingDays: Number(body.maxHoldingDays) || 14,
       tickers: body.tickers || [],

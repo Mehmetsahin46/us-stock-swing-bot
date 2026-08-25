@@ -1,9 +1,9 @@
 import { Candle, BacktestParams, BacktestResult, TradePosition } from './types';
-import { fetchStockCandles, calculateTechnicals, STOCK_UNIVERSE } from './marketData';
+import { fetchStockCandles, calculateTechnicals, US_UNIVERSE, BIST_UNIVERSE, COMBINED_UNIVERSE } from './marketData';
 import { evaluateSignal } from './strategyEngine';
 
 export async function runBacktest(params: BacktestParams): Promise<BacktestResult> {
-  const { periodMonths = 6, initialBalance = 10000, riskPerTradePct = 2.0, maxHoldingDays = 14 } = params;
+  const { periodMonths = 6, initialBalance = 100000, riskPerTradePct = 2.0, maxHoldingDays = 14, market = 'ALL' } = params;
 
   let cash = initialBalance;
   let totalEquity = initialBalance;
@@ -11,22 +11,23 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
   const openPositions: (TradePosition & { entryIndex: number })[] = [];
   const equityCurve: { date: string; equity: number }[] = [];
 
-  // Fetch candle data for tickers
-  const tickerList = params.tickers && params.tickers.length > 0
-    ? params.tickers
-    : STOCK_UNIVERSE.slice(0, 15).map(s => s.ticker);
+  const universe = market === 'US' 
+    ? US_UNIVERSE 
+    : market === 'BIST' 
+    ? BIST_UNIVERSE 
+    : COMBINED_UNIVERSE;
 
+  const tickerList = universe.slice(0, 15);
   const rangeStr = periodMonths <= 3 ? '3mo' : periodMonths <= 6 ? '6mo' : '1y';
   const tickerCandlesMap = new Map<string, Candle[]>();
 
-  for (const ticker of tickerList) {
-    const candles = await fetchStockCandles(ticker, rangeStr);
-    if (candles.length > 60) {
-      tickerCandlesMap.set(ticker, candles);
+  for (const item of tickerList) {
+    const candles = await fetchStockCandles(item.ticker, rangeStr);
+    if (candles.length > 30) {
+      tickerCandlesMap.set(item.ticker, candles);
     }
   }
 
-  // Find timeline dates from largest candle set
   let allDates: string[] = [];
   for (const candles of tickerCandlesMap.values()) {
     const dates = candles.map(c => c.date);
@@ -35,13 +36,11 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
     }
   }
 
-  // Simulation starts after index 50 to have enough data for EMA50/RSI14
-  const startIndex = 50;
+  const startIndex = 30;
 
   for (let d = startIndex; d < allDates.length; d++) {
     const currentDate = allDates[d];
 
-    // 1. Update existing open positions
     const activePositions: typeof openPositions = [];
     for (const pos of openPositions) {
       const candles = tickerCandlesMap.get(pos.ticker);
@@ -63,22 +62,17 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
       let exitReason = '';
       let status: TradePosition['status'] = 'OPEN';
 
-      // Check Stop-Loss
       if (candle.low <= pos.stopLoss) {
         closed = true;
         exitPrice = pos.stopLoss;
         status = 'CLOSED_SL';
         exitReason = 'Stop-Loss tetiklendi';
-      }
-      // Check Target 2
-      else if (candle.high >= pos.target2) {
+      } else if (candle.high >= pos.target2) {
         closed = true;
         exitPrice = pos.target2;
         status = 'CLOSED_TP2';
         exitReason = 'Hedef 2 (TP2) alındı';
-      }
-      // Check Max holding period (14 days)
-      else if (pos.daysHeld >= maxHoldingDays) {
+      } else if (pos.daysHeld >= maxHoldingDays) {
         closed = true;
         exitPrice = candle.close;
         status = 'CLOSED_EXPIRED';
@@ -102,10 +96,12 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
     openPositions.length = 0;
     openPositions.push(...activePositions);
 
-    // 2. Scan for new entries on current day (max 4 open positions in backtest)
-    if (openPositions.length < 4) {
-      for (const [ticker, candles] of tickerCandlesMap.entries()) {
-        if (openPositions.some(p => p.ticker === ticker)) continue;
+    if (openPositions.length < 5) {
+      for (const item of tickerList) {
+        if (openPositions.some(p => p.ticker === item.ticker)) continue;
+
+        const candles = tickerCandlesMap.get(item.ticker);
+        if (!candles) continue;
 
         const candleIndex = candles.findIndex(c => c.date === currentDate);
         if (candleIndex < startIndex) continue;
@@ -114,8 +110,8 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
         const technicals = calculateTechnicals(historicalSlice);
         if (!technicals) continue;
 
-        const signal = evaluateSignal(ticker, technicals, historicalSlice);
-        if (signal && (params.strategies.length === 0 || params.strategies.includes(signal.strategy))) {
+        const signal = evaluateSignal(item.ticker, item.displayTicker, item.market, item.currency, technicals, historicalSlice);
+        if (signal && (!params.strategies || params.strategies.length === 0 || params.strategies.includes(signal.strategy))) {
           const riskAmount = totalEquity * (riskPerTradePct / 100);
           const riskPerShare = Math.max(0.1, signal.suggestedEntry - signal.stopLoss);
           let shares = Math.floor(riskAmount / riskPerShare);
@@ -128,8 +124,11 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
             cash -= cost;
 
             openPositions.push({
-              id: `bt_${ticker}_${currentDate}`,
-              ticker,
+              id: `bt_${item.ticker}_${currentDate}`,
+              ticker: item.ticker,
+              displayTicker: item.displayTicker,
+              market: item.market,
+              currency: item.currency,
               strategy: signal.strategy,
               strategyName: signal.strategyName,
               entryDate: currentDate,
@@ -152,13 +151,12 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
               entryIndex: candleIndex
             });
 
-            if (openPositions.length >= 4) break;
+            if (openPositions.length >= 5) break;
           }
         }
       }
     }
 
-    // Calculate daily total equity
     let openValue = 0;
     for (const p of openPositions) {
       openValue += p.shares * p.currentPrice;
@@ -167,7 +165,6 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
     equityCurve.push({ date: currentDate, equity: totalEquity });
   }
 
-  // Summary statistics
   const totalTrades = closedTrades.length;
   const winningTrades = closedTrades.filter(t => t.realizedPnL > 0);
   const losingTrades = closedTrades.filter(t => t.realizedPnL <= 0);
@@ -179,7 +176,6 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
 
   const totalReturnPct = Number((((totalEquity - initialBalance) / initialBalance) * 100).toFixed(2));
 
-  // Max Drawdown calculation
   let peak = initialBalance;
   let maxDD = 0;
   for (const point of equityCurve) {
@@ -203,6 +199,7 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
   return {
     summary: {
       period: `Son ${periodMonths} Ay`,
+      market: market === 'BIST' ? 'Borsa İstanbul (BIST)' : market === 'US' ? 'ABD Borsaları' : 'Tüm Piyasalar',
       initialCapital: initialBalance,
       finalCapital: totalEquity,
       totalReturnPct,

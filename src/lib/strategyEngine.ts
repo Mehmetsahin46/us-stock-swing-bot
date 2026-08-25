@@ -1,16 +1,19 @@
-import { Candle, Signal, StrategyType, TechnicalIndicators } from './types';
+import { Candle, CurrencyType, MarketType, Signal, StrategyType, TechnicalIndicators } from './types';
 
 export function evaluateSignal(
   ticker: string,
+  displayTicker: string,
+  market: MarketType,
+  currency: CurrencyType,
   tech: TechnicalIndicators,
   candles: Candle[]
 ): Signal | null {
-  const { price, ema9, ema20, ema50, ema200, rsi14, atr14, rvol, high20, changePercent } = tech;
+  const { price, ema20, ema50, rsi14, atr14, rvol, high20, changePercent } = tech;
+  const currSign = currency === 'TRY' ? '₺' : '$';
 
-  // 1. STRATEGY: EMA 20 Pullback / Trend Desteği
-  // Trend: Fiyat 50 EMA üzerinde ve 20 EMA'ya temas/yakın seviyede toparlanıyor
+  // 1. STRATEGY: EMA 20 Pullback
   const isUptrend = price > ema50 && ema20 > ema50;
-  const isNearEMA20 = Math.abs(price - ema20) / ema20 <= 0.02 || (candles.length > 2 && candles[candles.length - 2].low <= ema20 && price >= ema20);
+  const isNearEMA20 = Math.abs(price - ema20) / ema20 <= 0.025 || (candles.length > 2 && candles[candles.length - 2].low <= ema20 && price >= ema20);
   const isHealthyRSI = rsi14 >= 35 && rsi14 <= 62;
 
   if (isUptrend && isNearEMA20 && isHealthyRSI) {
@@ -26,11 +29,14 @@ export function evaluateSignal(
       return {
         id: `sig_${ticker}_${Date.now()}`,
         ticker,
+        displayTicker,
+        market,
+        currency,
         strategy: 'EMA_PULLBACK',
         strategyName: 'EMA 20 Trend Desteği (Pullback)',
-        title: `${ticker} - 20 Günlük Ortalama Desteğinden Tepki`,
+        title: `${displayTicker} - 20 Günlük Ortalama Desteğinden Tepki`,
         score: Math.min(95, Math.round(75 + (rvol > 1 ? 10 : 0) + (rsi14 > 45 ? 10 : 5))),
-        reason: `Hisse yükselen trendde 20 EMA ($${ema20}) desteğini test etti ve RSI (${rsi14}) dengeli bölgede. 1-14 gün için yukarı yönlü trend devamı bekleniyor.`,
+        reason: `Hisse yükselen trendde 20 EMA (${currSign}${ema20}) desteğini test etti ve RSI (${rsi14}) dengeli bölgede. 1-14 gün için yukarı yönlü trend devamı bekleniyor.`,
         suggestedEntry: price,
         stopLoss,
         target1,
@@ -43,9 +49,8 @@ export function evaluateSignal(
     }
   }
 
-  // 2. STRATEGY: High-Volume Breakout (Kırılım & Momentum)
-  // Fiyat 20 günlük zirveye yakın/üstünde ve Hacim yüksek
-  const isBreakout = price >= high20 * 0.995 && rvol >= 1.25 && price > ema20;
+  // 2. STRATEGY: High-Volume Breakout
+  const isBreakout = price >= high20 * 0.992 && rvol >= 1.2 && price > ema20;
   const isMomentumRSI = rsi14 >= 55 && rsi14 <= 78;
 
   if (isBreakout && isMomentumRSI) {
@@ -61,11 +66,14 @@ export function evaluateSignal(
       return {
         id: `sig_${ticker}_${Date.now()}`,
         ticker,
+        displayTicker,
+        market,
+        currency,
         strategy: 'BREAKOUT',
         strategyName: 'Yüksek Hacimli Kırılım (Breakout)',
-        title: `${ticker} - 20 Günlük Zirve Kırılımı (RVOL: ${rvol}x)`,
+        title: `${displayTicker} - 20 Günlük Zirve Kırılımı (RVOL: ${rvol}x)`,
         score: Math.min(98, Math.round(80 + (rvol > 1.5 ? 12 : 6) + (changePercent > 1 ? 6 : 2))),
-        reason: `Hisse son 20 günün zirvesini ($${high20}) hacimli şekilde (RVOL ${rvol}x) zorluyor/kırıyor. Momentum güçlü.`,
+        reason: `Hisse son 20 günün zirvesini (${currSign}${high20}) hacimli şekilde (RVOL ${rvol}x) zorluyor/kırıyor. Momentum güçlü.`,
         suggestedEntry: price,
         stopLoss,
         target1,
@@ -78,8 +86,7 @@ export function evaluateSignal(
     }
   }
 
-  // 3. STRATEGY: Oversold Mean Reversion (Aşırı Satımdan Tepki)
-  // RSI < 32 ve gün içi artıya geçiş
+  // 3. STRATEGY: Oversold Mean Reversion
   const isOversold = rsi14 <= 32 && (changePercent >= 0.2 || (candles.length > 2 && price > candles[candles.length - 2].low));
 
   if (isOversold) {
@@ -95,9 +102,12 @@ export function evaluateSignal(
       return {
         id: `sig_${ticker}_${Date.now()}`,
         ticker,
+        displayTicker,
+        market,
+        currency,
         strategy: 'OVERSOLD_BOUNCE',
         strategyName: 'Aşırı Satım Tepki Alımı (Mean Reversion)',
-        title: `${ticker} - RSI ${rsi14} Aşırı Satım Bölgesinden Tepki`,
+        title: `${displayTicker} - RSI ${rsi14} Aşırı Satım Bölgesinden Tepki`,
         score: Math.min(90, Math.round(70 + (35 - rsi14) * 1.5)),
         reason: `RSI göstergesi ${rsi14} ile aşırı satım bölgesinde ve dip seviyelerden toparlanma emareleri gösteriyor.`,
         suggestedEntry: price,

@@ -1,3 +1,5 @@
+export type MarketType = 'US' | 'BIST';
+export type CurrencyType = 'USD' | 'TRY';
 export type StrategyType = 'EMA_PULLBACK' | 'BREAKOUT' | 'OVERSOLD_BOUNCE';
 
 export interface Candle {
@@ -29,7 +31,10 @@ export interface TechnicalIndicators {
 
 export interface StockScanResult {
   ticker: string;
+  displayTicker: string;
   name: string;
+  market: MarketType;
+  currency: CurrencyType;
   technicals: TechnicalIndicators;
   signal: Signal | null;
 }
@@ -37,10 +42,13 @@ export interface StockScanResult {
 export interface Signal {
   id: string;
   ticker: string;
+  displayTicker: string;
+  market: MarketType;
+  currency: CurrencyType;
   strategy: StrategyType;
   strategyName: string;
   title: string;
-  score: number; // 0 - 100
+  score: number;
   reason: string;
   suggestedEntry: number;
   stopLoss: number;
@@ -63,6 +71,9 @@ export type PositionStatus =
 export interface TradePosition {
   id: string;
   ticker: string;
+  displayTicker: string;
+  market: MarketType;
+  currency: CurrencyType;
   strategy: StrategyType;
   strategyName: string;
   entryDate: string;
@@ -84,16 +95,17 @@ export interface TradePosition {
   exitPrice?: number;
   exitReason?: string;
   daysHeld: number;
-  maxHoldingDays: number; // default 14
+  maxHoldingDays: number;
 }
 
 export interface BotSettings {
   startingCapital: number;
-  riskPerTradePct: number; // e.g. 2.0 (%)
-  maxOpenPositions: number; // e.g. 5
-  maxHoldingDays: number; // e.g. 14
+  riskPerTradePct: number;
+  maxOpenPositions: number;
+  maxHoldingDays: number;
   autoTrade: boolean;
   minRVOL: number;
+  activeMarket: 'ALL' | 'US' | 'BIST';
   allowedStrategies: StrategyType[];
 }
 
@@ -116,17 +128,19 @@ export interface PortfolioState {
 }
 
 export interface BacktestParams {
+  market: 'ALL' | 'US' | 'BIST';
   periodMonths: number;
   initialBalance: number;
   riskPerTradePct: number;
   maxHoldingDays: number;
-  tickers: string[];
-  strategies: StrategyType[];
+  tickers?: string[];
+  strategies?: StrategyType[];
 }
 
 export interface BacktestResult {
   summary: {
     period: string;
+    market: string;
     initialCapital: number;
     finalCapital: number;
     totalReturnPct: number;

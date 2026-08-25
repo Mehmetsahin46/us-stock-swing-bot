@@ -18,33 +18,48 @@ export const Header: React.FC<HeaderProps> = ({
   lastScanTime,
   autoTrade
 }) => {
-  const [marketStatus, setMarketStatus] = useState<{ isOpen: boolean; text: string }>({
+  const [usStatus, setUsStatus] = useState<{ isOpen: boolean; text: string }>({
     isOpen: false,
-    text: 'Kontrol ediliyor...'
+    text: 'NYSE: Kontrol...'
+  });
+  const [bistStatus, setBistStatus] = useState<{ isOpen: boolean; text: string }>({
+    isOpen: false,
+    text: 'BIST: Kontrol...'
   });
 
   useEffect(() => {
-    function checkMarketHours() {
+    function checkHours() {
       const now = new Date();
-      const options: Intl.DateTimeFormatOptions = { timeZone: 'America/New_York', hour12: false };
-      const nyDay = new Intl.DateTimeFormat('en-US', { ...options, weekday: 'short' }).format(now);
-      const nyHour = parseInt(new Intl.DateTimeFormat('en-US', { ...options, hour: 'numeric' }).format(now), 10);
-      const nyMin = parseInt(new Intl.DateTimeFormat('en-US', { ...options, minute: 'numeric' }).format(now), 10);
 
-      const isWeekday = !['Sat', 'Sun'].includes(nyDay);
-      const timeInMinutes = nyHour * 60 + nyMin;
-      const openTime = 9 * 60 + 30; // 9:30 AM
-      const closeTime = 16 * 60;    // 4:00 PM
+      // 1. Check US Market (9:30 - 16:00 ET, Mon-Fri)
+      const nyOptions: Intl.DateTimeFormatOptions = { timeZone: 'America/New_York', hour12: false };
+      const nyDay = new Intl.DateTimeFormat('en-US', { ...nyOptions, weekday: 'short' }).format(now);
+      const nyHour = parseInt(new Intl.DateTimeFormat('en-US', { ...nyOptions, hour: 'numeric' }).format(now), 10);
+      const nyMin = parseInt(new Intl.DateTimeFormat('en-US', { ...nyOptions, minute: 'numeric' }).format(now), 10);
+      const isNyWeekday = !['Sat', 'Sun'].includes(nyDay);
+      const nyMinutes = nyHour * 60 + nyMin;
+      const isNyOpen = isNyWeekday && nyMinutes >= 570 && nyMinutes < 960;
+      setUsStatus({
+        isOpen: isNyOpen,
+        text: isNyOpen ? '🇺🇸 ABD: AÇIK' : '🇺🇸 ABD: KAPALI'
+      });
 
-      if (isWeekday && timeInMinutes >= openTime && timeInMinutes < closeTime) {
-        setMarketStatus({ isOpen: true, text: 'NYSE / NASDAQ AÇIK' });
-      } else {
-        setMarketStatus({ isOpen: false, text: 'NYSE / NASDAQ KAPALI' });
-      }
+      // 2. Check BIST Market (10:00 - 18:00 TSİ, Mon-Fri)
+      const istOptions: Intl.DateTimeFormatOptions = { timeZone: 'Europe/Istanbul', hour12: false };
+      const istDay = new Intl.DateTimeFormat('en-US', { ...istOptions, weekday: 'short' }).format(now);
+      const istHour = parseInt(new Intl.DateTimeFormat('en-US', { ...istOptions, hour: 'numeric' }).format(now), 10);
+      const istMin = parseInt(new Intl.DateTimeFormat('en-US', { ...istOptions, minute: 'numeric' }).format(now), 10);
+      const isIstWeekday = !['Sat', 'Sun'].includes(istDay);
+      const istMinutes = istHour * 60 + istMin;
+      const isBistOpen = isIstWeekday && istMinutes >= 600 && istMinutes < 1080;
+      setBistStatus({
+        isOpen: isBistOpen,
+        text: isBistOpen ? '🇹🇷 BIST: AÇIK' : '🇹🇷 BIST: KAPALI'
+      });
     }
 
-    checkMarketHours();
-    const interval = setInterval(checkMarketHours, 60000);
+    checkHours();
+    const interval = setInterval(checkHours, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -56,38 +71,47 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-bold text-lg text-white tracking-tight">US Stock Swing Bot</h1>
+            <h1 className="font-bold text-lg text-white tracking-tight">Global & BIST Swing Bot</h1>
             <span className="text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full bg-accent-500/20 text-accent-400 border border-accent-500/30">
               1-14 Gün Demo
             </span>
           </div>
           <p className="text-xs text-muted">
-            Otomatik Swing & Momentum Kağıt İşlem Simülatörü
+            ABD & Borsa İstanbul Otomatik Swing Simülatörü
           </p>
         </div>
       </div>
 
       <div className="flex items-center flex-wrap gap-2.5">
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium ${
-          marketStatus.isOpen 
+        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${
+          bistStatus.isOpen 
             ? 'bg-primary-500/10 border-primary-500/30 text-primary-400' 
             : 'bg-slate-800/80 border-slate-700 text-slate-400'
         }`}>
-          <span className={`w-2 h-2 rounded-full ${marketStatus.isOpen ? 'bg-primary-500 animate-pulse' : 'bg-slate-500'}`} />
-          <span>{marketStatus.text}</span>
+          <span className={`w-2 h-2 rounded-full ${bistStatus.isOpen ? 'bg-primary-500 animate-pulse' : 'bg-slate-500'}`} />
+          <span>{bistStatus.text}</span>
+        </div>
+
+        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${
+          usStatus.isOpen 
+            ? 'bg-primary-500/10 border-primary-500/30 text-primary-400' 
+            : 'bg-slate-800/80 border-slate-700 text-slate-400'
+        }`}>
+          <span className={`w-2 h-2 rounded-full ${usStatus.isOpen ? 'bg-primary-500 animate-pulse' : 'bg-slate-500'}`} />
+          <span>{usStatus.text}</span>
         </div>
 
         {autoTrade && (
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-medium">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Oto-Trade Aktif</span>
+            <span>Oto-Trade</span>
           </div>
         )}
 
         {lastScanTime && (
           <div className="hidden sm:flex items-center gap-1 text-xs text-muted px-2.5 py-1.5 rounded-lg bg-card border border-border">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span>Son Tarama: {new Date(lastScanTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span>{new Date(lastScanTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
         )}
 
@@ -97,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 active:scale-95 disabled:opacity-50 text-white text-xs font-semibold shadow-md shadow-primary-500/20 transition-all cursor-pointer"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
-          <span>{isScanning ? 'Taranıyor...' : 'Piyasayı Tara & Güncelle'}</span>
+          <span>{isScanning ? 'Taranıyor...' : 'Piyasaları Tara'}</span>
         </button>
 
         <button

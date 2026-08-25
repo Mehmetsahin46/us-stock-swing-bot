@@ -20,7 +20,7 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
         </div>
         <h3 className="text-sm font-semibold text-white">Şu Anda Açık Demo Pozisyon Yok</h3>
         <p className="text-xs text-muted max-w-sm mx-auto mt-1">
-          Piyasa tarayıcısı üzerinden sinyal veren hisselerden sanal pozisyon açabilir veya otomatik tarayıcının sinyalleri işlemesini bekleyebilirsiniz.
+          Canlı Piyasa Tarayıcısı sekmesinden ABD veya BIST hisselerinde tespit edilen sinyallerle sanal pozisyon açabilirsiniz.
         </p>
       </div>
     );
@@ -45,23 +45,26 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
             const isProfit = pos.unrealizedPnL >= 0;
             const progressToTP = Math.min(100, Math.max(0, ((pos.currentPrice - pos.entryPrice) / (pos.target2 - pos.entryPrice)) * 100));
             const holdingProgress = Math.min(100, (pos.daysHeld / pos.maxHoldingDays) * 100);
+            const currSign = pos.currency === 'TRY' ? '₺' : '$';
 
             return (
               <tr key={pos.id} className="hover:bg-slate-800/40 transition-colors">
                 <td className="py-3.5 px-4">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center font-bold text-white text-xs">
-                      {pos.ticker.slice(0, 3)}
+                      {pos.displayTicker.slice(0, 3)}
                     </div>
                     <div>
                       <div className="font-bold text-white text-sm flex items-center gap-1.5">
-                        {pos.ticker}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-normal border border-border">
-                          {pos.strategy === 'EMA_PULLBACK' ? 'EMA Pullback' : pos.strategy === 'BREAKOUT' ? 'Breakout' : 'Oversold'}
+                        {pos.displayTicker}
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
+                          pos.market === 'BIST' ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                        }`}>
+                          {pos.market === 'BIST' ? '🇹🇷 BIST' : '🇺🇸 US'}
                         </span>
                       </div>
                       <div className="text-[11px] text-muted mt-0.5">
-                        Giriş: {pos.entryDate}
+                        {pos.strategyName}
                       </div>
                     </div>
                   </div>
@@ -69,10 +72,10 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
 
                 <td className="py-3.5 px-4">
                   <div className="font-semibold text-white">
-                    ${pos.currentPrice.toFixed(2)}
+                    {currSign}{pos.currentPrice.toFixed(2)}
                   </div>
                   <div className="text-[11px] text-muted">
-                    Giriş: ${pos.entryPrice.toFixed(2)}
+                    Giriş: {currSign}{pos.entryPrice.toFixed(2)}
                   </div>
                 </td>
 
@@ -81,14 +84,14 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
                     {pos.shares} Lot
                   </div>
                   <div className="text-[11px] text-muted">
-                    ${pos.totalCost.toFixed(2)}
+                    {currSign}{pos.totalCost.toFixed(2)}
                   </div>
                 </td>
 
                 <td className="py-3.5 px-4">
                   <div className={`font-bold flex items-center gap-0.5 ${isProfit ? 'text-primary-400' : 'text-danger-400'}`}>
                     {isProfit ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-                    <span>{isProfit ? '+' : ''}${pos.unrealizedPnL.toFixed(2)}</span>
+                    <span>{isProfit ? '+' : ''}{currSign}{pos.unrealizedPnL.toFixed(2)}</span>
                     <span className="text-[11px] font-semibold">({isProfit ? '+' : ''}{pos.unrealizedPnLPct}%)</span>
                   </div>
                 </td>
@@ -96,10 +99,10 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
                 <td className="py-3.5 px-4 min-w-[160px]">
                   <div className="flex justify-between text-[11px] mb-1">
                     <span className="text-danger-400 flex items-center gap-0.5">
-                      <AlertOctagon className="w-3 h-3" /> ${pos.stopLoss.toFixed(2)}
+                      <AlertOctagon className="w-3 h-3" /> {currSign}{pos.stopLoss.toFixed(2)}
                     </span>
                     <span className="text-primary-400 flex items-center gap-0.5">
-                      <Target className="w-3 h-3" /> ${pos.target2.toFixed(2)}
+                      <Target className="w-3 h-3" /> {currSign}{pos.target2.toFixed(2)}
                     </span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden relative">
