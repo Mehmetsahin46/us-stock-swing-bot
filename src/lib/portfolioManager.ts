@@ -1,56 +1,25 @@
-import { BotSettings, PortfolioState, Signal, TradePosition } from './types';
+import { MarketPortfolio, Signal, TradePosition } from './types';
 
-export const DEFAULT_SETTINGS: BotSettings = {
-  startingCapital: 100000,
-  riskPerTradePct: 2.0,
-  maxOpenPositions: 6,
-  maxHoldingDays: 14,
-  autoTrade: false,
-  minRVOL: 0.8,
-  activeMarket: 'ALL',
-  allowedStrategies: ['EMA_PULLBACK', 'BREAKOUT', 'OVERSOLD_BOUNCE']
-};
-
-export const INITIAL_PORTFOLIO_STATE: PortfolioState = {
-  initialBalance: 100000,
-  cash: 100000,
-  totalEquity: 100000,
-  realizedPnL: 0,
-  unrealizedPnL: 0,
-  winRate: 0,
-  totalTrades: 0,
-  winningTrades: 0,
-  losingTrades: 0,
-  profitFactor: 0,
-  positions: [],
-  history: [],
-  equityCurve: [
-    {
-      date: new Date().toISOString().split('T')[0],
-      equity: 100000
-    }
-  ],
-  lastScanTime: null,
-  settings: DEFAULT_SETTINGS
-};
-
-export function openPaperPosition(
+export function openPositionForMarket(
   signal: Signal,
-  currentState: PortfolioState
-): { state: PortfolioState; success: boolean; message: string } {
-  const state = JSON.parse(JSON.stringify(currentState)) as PortfolioState;
+  currentPortfolio: MarketPortfolio
+): { portfolio: MarketPortfolio; success: boolean; message: string } {
+  const portfolio = JSON.parse(JSON.stringify(currentPortfolio)) as MarketPortfolio;
 
-  const existing = state.positions.find(p => p.ticker === signal.ticker && p.status === 'OPEN');
+  // 1. Check if position already open for this ticker
+  const existing = portfolio.positions.find(p => p.ticker === signal.ticker && p.status === 'OPEN');
   if (existing) {
-    return { state: currentState, success: false, message: `${signal.displayTicker} için zaten açık bir pozisyon mevcut.` };
+    return { portfolio: currentPortfolio, success: false, message: `${signal.displayTicker} için zaten açık bir pozisyon mevcut.` };
   }
 
-  const openCount = state.positions.filter(p => p.status === 'OPEN').length;
-  if (openCount >= state.settings.maxOpenPositions) {
-    return { state: currentState, success: false, message: `Maksimum açık pozisyon limitine (${state.settings.maxOpenPositions}) ulaşıldı.` };
+  // 2. Check max open positions
+  const openCount = portfolio.positions.filter(p => p.status === 'OPEN').length;
+  if (openCount >= portfolio.maxOpenPositions) {
+    return { portfolio: currentPortfolio, success: false, message: `Maksimum açık pozisyon limitine (${portfolio.maxOpenPositions}) ulaşıldı.` };
   }
 
-  const riskAmount = state.totalEquity * (state.settings.riskPerTradePct / 100);
+  // 3. Position Sizing: Risk per trade = 2% of total equity
+  const riskAmount = portfolio.totalEquity * (portfolio.riskPerTradePct / 100);
   const riskPerShare = Math.max(0.1, signal.suggestedEntry - signal.stopLoss);
   let shares = Math.floor(riskAmount / riskPerShare);
 
@@ -58,17 +27,18 @@ export function openPaperPosition(
 
   let totalCost = shares * signal.suggestedEntry;
 
-  if (totalCost > state.cash) {
-    shares = Math.floor(state.cash / signal.suggestedEntry);
+  // Scale down if exceeds available cash
+  if (totalCost > portfolio.cash) {
+    shares = Math.floor(portfolio.cash / signal.suggestedEntry);
     totalCost = shares * signal.suggestedEntry;
   }
 
   if (shares <= 0 || totalCost <= 0) {
-    return { state: currentState, success: false, message: 'Pozisyon açmak için yeterli nakit bakiye yok.' };
+    return { portfolio: currentPortfolio, success: false, message: 'Pozisyon açmak için yeterli nakit bakiye yok.' };
   }
 
-  state.cash = Number((state.cash - totalCost).toFixed(2));
-  const currSign = signal.currency === 'TRY' ? '₺' : '$';
+  portfolio.cash = Number((portfolio.cash - totalCost).toFixed(2));
+  const currSign = portfolio.currencySymbol;
 
   const newPosition: TradePosition = {
     id: `pos_${signal.ticker}_${Date.now()}`,
@@ -94,30 +64,30 @@ export function openPaperPosition(
     realizedPnLPct: 0,
     status: 'OPEN',
     daysHeld: 0,
-    maxHoldingDays: state.settings.maxHoldingDays
+    maxHoldingDays: portfolio.maxHoldingDays
   };
 
-  state.positions.unshift(newPosition);
-  recalculatePortfolio(state);
+  portfolio.positions.unshift(newPosition);
+  recalculateMarketPortfolio(portfolio);
 
   return {
-    state,
+    portfolio,
     success: true,
-    message: `${shares} adet ${signal.displayTicker} (${signal.market}) ${currSign}${signal.suggestedEntry.toFixed(2)} fiyattan sanal portföye eklendi.`
+    message: `${shares} adet ${signal.displayTicker} (${signal.market}) ${currSign}${signal.suggestedEntry.toFixed(2)} fiyattan alındı (Stop: ${currSign}${signal.stopLoss}, Hedef: ${currSign}${signal.target2}).`
   };
 }
 
-export function updatePositionsWithQuotes(
-  currentState: PortfolioState,
+export function updateMarketPositionsWithQuotes(
+  currentPortfolio: MarketPortfolio,
   quotesMap: Map<string, number>
-): { state: PortfolioState; events: string[] } {
-  const state = JSON.parse(JSON.stringify(currentState)) as PortfolioState;
+): { portfolio: MarketPortfolio; events: string[] } {
+  const portfolio = JSON.parse(JSON.stringify(currentPortfolio)) as MarketPortfolio;
   const events: string[] = [];
   const todayStr = new Date().toISOString().split('T')[0];
 
   const stillOpen: TradePosition[] = [];
 
-  for (const pos of state.positions) {
+  for (const pos of portfolio.positions) {
     if (pos.status !== 'OPEN') continue;
 
     const currentPrice = quotesMap.get(pos.ticker) || pos.currentPrice;
@@ -128,26 +98,31 @@ export function updatePositionsWithQuotes(
     pos.unrealizedPnL = Number(((currentPrice - pos.entryPrice) * pos.shares).toFixed(2));
     pos.unrealizedPnLPct = Number((((currentPrice - pos.entryPrice) / pos.entryPrice) * 100).toFixed(2));
 
-    const currSign = pos.currency === 'TRY' ? '₺' : '$';
+    const currSign = portfolio.currencySymbol;
 
     let shouldClose = false;
     let exitReason = '';
     let exitStatus: TradePosition['status'] = 'OPEN';
     let exitPrice = currentPrice;
 
+    // 1. Stop-Loss
     if (currentPrice <= pos.stopLoss) {
       shouldClose = true;
       exitStatus = 'CLOSED_SL';
       exitPrice = pos.stopLoss;
       exitReason = `Stop-Loss (${currSign}${pos.stopLoss}) tetiklendi.`;
       events.push(`🛑 ${pos.displayTicker} Stop-Loss seviyesine (${currSign}${pos.stopLoss}) ulaştı ve kapatıldı. Sonuç: %${pos.unrealizedPnLPct}`);
-    } else if (currentPrice >= pos.target2) {
+    }
+    // 2. Take-Profit 2
+    else if (currentPrice >= pos.target2) {
       shouldClose = true;
       exitStatus = 'CLOSED_TP2';
       exitPrice = pos.target2;
       exitReason = `Ana Kâr Hedefi (${currSign}${pos.target2}) gerçekleşti!`;
       events.push(`🎯 ${pos.displayTicker} Ana Kâr Hedefine (${currSign}${pos.target2}) ulaştı! Kâr: +%${pos.unrealizedPnLPct}`);
-    } else if (pos.daysHeld >= pos.maxHoldingDays) {
+    }
+    // 3. Max holding days expiration (14 days)
+    else if (pos.daysHeld >= pos.maxHoldingDays) {
       shouldClose = true;
       exitStatus = 'CLOSED_EXPIRED';
       exitPrice = currentPrice;
@@ -165,33 +140,33 @@ export function updatePositionsWithQuotes(
       pos.unrealizedPnL = 0;
       pos.unrealizedPnLPct = 0;
 
-      state.cash = Number((state.cash + pos.shares * exitPrice).toFixed(2));
-      state.history.unshift(pos);
+      portfolio.cash = Number((portfolio.cash + pos.shares * exitPrice).toFixed(2));
+      portfolio.history.unshift(pos);
     } else {
       stillOpen.push(pos);
     }
   }
 
-  state.positions = stillOpen;
-  recalculatePortfolio(state);
+  portfolio.positions = stillOpen;
+  recalculateMarketPortfolio(portfolio);
 
-  return { state, events };
+  return { portfolio, events };
 }
 
-export function manuallyClosePosition(
-  currentState: PortfolioState,
+export function manuallyClosePositionInMarket(
+  currentPortfolio: MarketPortfolio,
   positionId: string
-): { state: PortfolioState; success: boolean; message: string } {
-  const state = JSON.parse(JSON.stringify(currentState)) as PortfolioState;
-  const index = state.positions.findIndex(p => p.id === positionId && p.status === 'OPEN');
+): { portfolio: MarketPortfolio; success: boolean; message: string } {
+  const portfolio = JSON.parse(JSON.stringify(currentPortfolio)) as MarketPortfolio;
+  const index = portfolio.positions.findIndex(p => p.id === positionId && p.status === 'OPEN');
 
   if (index === -1) {
-    return { state: currentState, success: false, message: 'Açık pozisyon bulunamadı.' };
+    return { portfolio: currentPortfolio, success: false, message: 'Açık pozisyon bulunamadı.' };
   }
 
-  const pos = state.positions[index];
+  const pos = portfolio.positions[index];
   const exitPrice = pos.currentPrice;
-  const currSign = pos.currency === 'TRY' ? '₺' : '$';
+  const currSign = portfolio.currencySymbol;
 
   pos.status = 'CLOSED_MANUAL';
   pos.exitDate = new Date().toISOString().split('T')[0];
@@ -202,32 +177,32 @@ export function manuallyClosePosition(
   pos.unrealizedPnL = 0;
   pos.unrealizedPnLPct = 0;
 
-  state.cash = Number((state.cash + pos.shares * exitPrice).toFixed(2));
-  state.positions.splice(index, 1);
-  state.history.unshift(pos);
+  portfolio.cash = Number((portfolio.cash + pos.shares * exitPrice).toFixed(2));
+  portfolio.positions.splice(index, 1);
+  portfolio.history.unshift(pos);
 
-  recalculatePortfolio(state);
+  recalculateMarketPortfolio(portfolio);
 
   return {
-    state,
+    portfolio,
     success: true,
-    message: `${pos.displayTicker} pozisyonu ${currSign}${exitPrice.toFixed(2)} fiyattan manuel olarak kapatıldı.`
+    message: `${pos.displayTicker} pozisyonu ${currSign}${exitPrice.toFixed(2)} fiyattan kapatıldı.`
   };
 }
 
-export function recalculatePortfolio(state: PortfolioState) {
+export function recalculateMarketPortfolio(portfolio: MarketPortfolio) {
   let openPositionsValue = 0;
   let totalUnrealized = 0;
 
-  for (const pos of state.positions) {
+  for (const pos of portfolio.positions) {
     if (pos.status === 'OPEN') {
       openPositionsValue += pos.shares * pos.currentPrice;
       totalUnrealized += pos.unrealizedPnL;
     }
   }
 
-  state.unrealizedPnL = Number(totalUnrealized.toFixed(2));
-  state.totalEquity = Number((state.cash + openPositionsValue).toFixed(2));
+  portfolio.unrealizedPnL = Number(totalUnrealized.toFixed(2));
+  portfolio.totalEquity = Number((portfolio.cash + openPositionsValue).toFixed(2));
 
   let totalRealized = 0;
   let wins = 0;
@@ -235,7 +210,7 @@ export function recalculatePortfolio(state: PortfolioState) {
   let totalWinAmount = 0;
   let totalLossAmount = 0;
 
-  for (const trade of state.history) {
+  for (const trade of portfolio.history) {
     totalRealized += trade.realizedPnL;
     if (trade.realizedPnL > 0) {
       wins++;
@@ -246,19 +221,19 @@ export function recalculatePortfolio(state: PortfolioState) {
     }
   }
 
-  state.realizedPnL = Number(totalRealized.toFixed(2));
-  state.totalTrades = state.history.length;
-  state.winningTrades = wins;
-  state.losingTrades = losses;
-  state.winRate = state.totalTrades > 0 ? Number(((wins / state.totalTrades) * 100).toFixed(1)) : 0;
-  state.profitFactor = totalLossAmount > 0 ? Number((totalWinAmount / totalLossAmount).toFixed(2)) : wins > 0 ? 99 : 0;
+  portfolio.realizedPnL = Number(totalRealized.toFixed(2));
+  portfolio.totalTrades = portfolio.history.length;
+  portfolio.winningTrades = wins;
+  portfolio.losingTrades = losses;
+  portfolio.winRate = portfolio.totalTrades > 0 ? Number(((wins / portfolio.totalTrades) * 100).toFixed(1)) : 0;
+  portfolio.profitFactor = totalLossAmount > 0 ? Number((totalWinAmount / totalLossAmount).toFixed(2)) : wins > 0 ? 99 : 0;
 
   const todayStr = new Date().toISOString().split('T')[0];
-  const lastCurveEntry = state.equityCurve[state.equityCurve.length - 1];
+  const lastCurveEntry = portfolio.equityCurve[portfolio.equityCurve.length - 1];
 
   if (!lastCurveEntry || lastCurveEntry.date !== todayStr) {
-    state.equityCurve.push({ date: todayStr, equity: state.totalEquity });
+    portfolio.equityCurve.push({ date: todayStr, equity: portfolio.totalEquity });
   } else {
-    lastCurveEntry.equity = state.totalEquity;
+    lastCurveEntry.equity = portfolio.totalEquity;
   }
 }

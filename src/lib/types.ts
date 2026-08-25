@@ -98,18 +98,10 @@ export interface TradePosition {
   maxHoldingDays: number;
 }
 
-export interface BotSettings {
-  startingCapital: number;
-  riskPerTradePct: number;
-  maxOpenPositions: number;
-  maxHoldingDays: number;
-  autoTrade: boolean;
-  minRVOL: number;
-  activeMarket: 'ALL' | 'US' | 'BIST';
-  allowedStrategies: StrategyType[];
-}
-
-export interface PortfolioState {
+export interface MarketPortfolio {
+  market: MarketType;
+  currency: CurrencyType;
+  currencySymbol: string;
   initialBalance: number;
   cash: number;
   totalEquity: number;
@@ -120,11 +112,21 @@ export interface PortfolioState {
   winningTrades: number;
   losingTrades: number;
   profitFactor: number;
+  riskPerTradePct: number;
+  maxOpenPositions: number;
+  maxHoldingDays: number;
+  autoTrade: boolean;
   positions: TradePosition[];
   history: TradePosition[];
   equityCurve: { date: string; equity: number }[];
+}
+
+export interface DualPortfolioState {
+  bist: MarketPortfolio;
+  us: MarketPortfolio;
   lastScanTime: string | null;
-  settings: BotSettings;
+  lastCronTime: string | null;
+  activityLogs: Array<{ id: string; timestamp: string; market: MarketType; message: string; type: 'BUY' | 'SELL' | 'INFO' }>;
 }
 
 export interface BacktestParams {
