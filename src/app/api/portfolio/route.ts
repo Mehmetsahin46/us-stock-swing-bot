@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDualPortfolioState, saveDualPortfolioState } from '@/lib/serverStore';
 import { INITIAL_BIST_PORTFOLIO, INITIAL_US_PORTFOLIO } from '@/lib/constants';
+import { mergeDualStates } from '@/lib/stateSync';
 import { DualPortfolioState } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -27,8 +28,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.state) {
-      saveDualPortfolioState(body.state as DualPortfolioState);
-      return NextResponse.json({ success: true, state: body.state });
+      // Intelligently merge client state with server state
+      const merged = mergeDualStates(currentState, body.state as DualPortfolioState);
+      saveDualPortfolioState(merged);
+      return NextResponse.json({ success: true, state: merged });
     }
 
     return NextResponse.json({ success: false, error: 'Geçersiz istek.' }, { status: 400 });

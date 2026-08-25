@@ -21,12 +21,24 @@ import {
   manuallyClosePositionInMarket 
 } from '@/lib/portfolioManager';
 import { INITIAL_DUAL_STATE } from '@/lib/constants';
+import { mergeDualStates } from '@/lib/stateSync';
 import { LayoutDashboard, Radio, History, PlayCircle, ShieldCheck, Bell, ShieldAlert } from 'lucide-react';
 
-const STORAGE_KEY = 'dual_market_swing_portfolio_v4';
+const STORAGE_KEY = 'dual_market_swing_portfolio_v5';
 
 export default function HomePage() {
-  const [dualState, setDualState] = useState<DualPortfolioState>(INITIAL_DUAL_STATE);
+  const [dualState, setDualState] = useState<DualPortfolioState>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+    return INITIAL_DUAL_STATE;
+  });
+
   const [activeMarket, setActiveMarket] = useState<MarketType>('BIST');
   const [scanResults, setScanResults] = useState<StockScanResult[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
@@ -39,20 +51,22 @@ export default function HomePage() {
     setTimeout(() => setToastMessage(null), 4500);
   }
 
+  // 1. Sync & Merge with Server on initial load
   const syncWithServer = useCallback(async () => {
     try {
       const res = await fetch('/api/portfolio');
       const data = await res.json();
       if (data.success && data.state) {
-        setDualState(data.state);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
+        setDualState((prev) => {
+          const merged = mergeDualStates(prev, data.state);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          } catch (err) {}
+          return merged;
+        });
       }
     } catch (e) {
       console.warn('Fallback to local storage:', e);
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setDualState(JSON.parse(saved));
-      }
     }
   }, []);
 
@@ -60,6 +74,7 @@ export default function HomePage() {
     syncWithServer();
   }, [syncWithServer]);
 
+  // Persist changes to both localStorage and Server
   async function persistState(newState: DualPortfolioState) {
     setDualState(newState);
     try {
@@ -70,10 +85,11 @@ export default function HomePage() {
         body: JSON.stringify({ state: newState })
       });
     } catch (err) {
-      console.error('Error persisting state to server:', err);
+      console.error('Error persisting state:', err);
     }
   }
 
+  // 2. Scan Market & Auto-Execute with Smart Merge
   async function handleScanMarket() {
     setIsScanning(true);
     try {
@@ -179,6 +195,9 @@ export default function HomePage() {
       const data = await res.json();
       if (data.success && data.state) {
         setDualState(data.state);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
+        } catch (e) {}
         showToast(`${market} portföyü sıfırlandı.`);
       }
     } catch (err) {
@@ -213,6 +232,7 @@ export default function HomePage() {
       )}
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 space-y-6">
+        {/* Navigation Tabs */}
         <div className="flex items-center justify-between border-b border-border/80 pb-3 overflow-x-auto gap-3">
           <div className="flex items-center gap-2">
             <button
@@ -285,11 +305,11 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-danger-400 flex-shrink-0" />
               <div>
-                <strong className="text-white">Piyasa Koruma Modu Aktif:</strong> {currentRegime.reason}
+                <strong className="text-white">Piyasa Koruma Modu:</strong> {currentRegime.reason}
               </div>
             </div>
             <span className="text-[11px] px-2 py-0.5 rounded bg-danger-500/20 text-danger-300 font-semibold uppercase flex-shrink-0">
-              Yeni Alımlar Kilitlendi
+              Seçici Alım
             </span>
           </div>
         )}
@@ -303,7 +323,7 @@ export default function HomePage() {
               <div className="lg:col-span-2 space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-white">
-                    {activeMarket === 'BIST' ? '🇹🇷 BIST 30 Açık Pozisyonlar (1-14 Gün)' : '🇺🇸 ABD Açık Pozisyonlar (1-14 Gün)'}
+                    {activeMarket === 'BIST' ? '🇹🇷 BIST Açık Pozisyonlar (1-14 Gün)' : '🇺🇸 ABD Açık Pozisyonlar (1-14 Gün)'}
                   </h2>
                   <span className="text-xs text-muted">
                     {openPositionTickers.length} / {currentPortfolio.maxOpenPositions} Pozisyon
@@ -332,8 +352,8 @@ export default function HomePage() {
                   <ul className="text-muted space-y-1.5 list-disc pl-4 text-[11px]">
                     <li><strong>Kademeli Kâr Alma:</strong> TP1'de %50 kâr cebe konur, stop maliyete çekilir.</li>
                     <li><strong>Başa-Baş Stop:</strong> Kâra geçmiş işlem asla zararla kapanmaz.</li>
-                    <li><strong>Endeks Filtresi:</strong> Piyasa düşüş trendindeyse yeni risk alınmaz.</li>
-                    <li><strong>Sektör Sınırı:</strong> Aynı sektörden en fazla 2 hisseye izin verilir.</li>
+                    <li><strong>Hisse Sınırı:</strong> Tek hisseye en fazla %20 sermaye bağlanır (Dengeli sepet).</li>
+                    <li><strong>Sektör Sınırı:</strong> Aynı sektörden en fazla 4 hisseye izin verilir.</li>
                   </ul>
                 </div>
               </div>
