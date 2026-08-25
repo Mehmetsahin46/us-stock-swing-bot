@@ -18,13 +18,12 @@ import {
 } from '@/lib/types';
 import { 
   openPositionForMarket, 
-  manuallyClosePositionInMarket, 
-  updateMarketPositionsWithQuotes 
+  manuallyClosePositionInMarket 
 } from '@/lib/portfolioManager';
 import { INITIAL_DUAL_STATE } from '@/lib/constants';
-import { LayoutDashboard, Radio, History, PlayCircle, Activity, Bell } from 'lucide-react';
+import { LayoutDashboard, Radio, History, PlayCircle, ShieldCheck, Bell, ShieldAlert } from 'lucide-react';
 
-const STORAGE_KEY = 'dual_market_swing_portfolio_v3';
+const STORAGE_KEY = 'dual_market_swing_portfolio_v4';
 
 export default function HomePage() {
   const [dualState, setDualState] = useState<DualPortfolioState>(INITIAL_DUAL_STATE);
@@ -40,7 +39,6 @@ export default function HomePage() {
     setTimeout(() => setToastMessage(null), 4500);
   }
 
-  // 1. Fetch live portfolio from Server API on load & sync with localStorage
   const syncWithServer = useCallback(async () => {
     try {
       const res = await fetch('/api/portfolio');
@@ -50,7 +48,7 @@ export default function HomePage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
       }
     } catch (e) {
-      console.warn('Could not sync with server, fallback to local storage:', e);
+      console.warn('Fallback to local storage:', e);
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         setDualState(JSON.parse(saved));
@@ -62,7 +60,6 @@ export default function HomePage() {
     syncWithServer();
   }, [syncWithServer]);
 
-  // Persist changes to server and local storage
   async function persistState(newState: DualPortfolioState) {
     setDualState(newState);
     try {
@@ -77,15 +74,12 @@ export default function HomePage() {
     }
   }
 
-  // 2. Scan Market & Auto-Execute
   async function handleScanMarket() {
     setIsScanning(true);
     try {
-      // Trigger cron endpoint to run automated server-side scan and position evaluation
       const cronRes = await fetch('/api/cron');
       const cronData = await cronRes.json();
 
-      // Fetch latest scan data
       const scanRes = await fetch('/api/market/scan?market=ALL');
       const scanData = await scanRes.json();
 
@@ -96,7 +90,7 @@ export default function HomePage() {
       await syncWithServer();
 
       if (cronData.logs && cronData.logs.length > 0) {
-        showToast(`Piyasalar güncellendi: ${cronData.logs.slice(0, 2).join(' | ')}`);
+        showToast(`İşlem Güncellemesi: ${cronData.logs.slice(0, 2).join(' | ')}`);
       } else {
         showToast('Piyasalar tarandı ve açık pozisyonlar güncellendi.');
       }
@@ -108,17 +102,15 @@ export default function HomePage() {
     }
   }
 
-  // Auto-scan on load and every 90 seconds while dashboard is open
   useEffect(() => {
     handleScanMarket();
     const interval = setInterval(handleScanMarket, 90000);
     return () => clearInterval(interval);
   }, []);
 
-  // Current active portfolio
   const currentPortfolio: MarketPortfolio = activeMarket === 'BIST' ? dualState.bist : dualState.us;
+  const currentRegime = activeMarket === 'BIST' ? dualState.bistRegime : dualState.usRegime;
 
-  // Open manual trade
   function handleOpenPaperTrade(signal: Signal) {
     const targetPortfolio = signal.market === 'BIST' ? dualState.bist : dualState.us;
     const { portfolio: newPort, success, message } = openPositionForMarket(signal, targetPortfolio);
@@ -145,7 +137,6 @@ export default function HomePage() {
     }
   }
 
-  // Close manual trade
   function handleManualClose(positionId: string) {
     const { portfolio: newPort, success, message } = manuallyClosePositionInMarket(currentPortfolio, positionId);
     if (success) {
@@ -168,7 +159,6 @@ export default function HomePage() {
     }
   }
 
-  // Save Settings
   function handleSaveSettings(newBist: MarketPortfolio, newUs: MarketPortfolio) {
     const updated: DualPortfolioState = {
       ...dualState,
@@ -179,7 +169,6 @@ export default function HomePage() {
     showToast('Ayarlar kaydedildi.');
   }
 
-  // Reset Market
   async function handleResetMarket(market: 'BIST' | 'US') {
     try {
       const res = await fetch('/api/portfolio', {
@@ -203,7 +192,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
       <Header
         onScan={handleScanMarket}
         isScanning={isScanning}
@@ -213,9 +201,10 @@ export default function HomePage() {
         onSelectMarket={setActiveMarket}
         bistAuto={dualState.bist.autoTrade}
         usAuto={dualState.us.autoTrade}
+        bistRegime={dualState.bistRegime}
+        usRegime={dualState.usRegime}
       />
 
-      {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl bg-surface border border-primary-500/40 text-primary-300 text-xs font-medium shadow-2xl animate-fade-in flex items-center gap-2">
           <Bell className="w-4 h-4 text-primary-400" />
@@ -223,9 +212,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 space-y-6">
-        {/* Navigation Tabs */}
         <div className="flex items-center justify-between border-b border-border/80 pb-3 overflow-x-auto gap-3">
           <div className="flex items-center gap-2">
             <button
@@ -282,16 +269,30 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* Quick info tag */}
           <div className="hidden md:flex items-center gap-2 text-[11px] text-muted">
             <span className="px-2 py-0.5 rounded bg-card border border-border">
-              Mevcut Limit: <strong className="text-white">{activeMarket === 'BIST' ? '10.000 TL' : '500 USD'}</strong>
+              Bütçe: <strong className="text-white">{activeMarket === 'BIST' ? '10.000 TL' : '500 USD'}</strong>
             </span>
             <span className="px-2 py-0.5 rounded bg-card border border-border">
               Risk: <strong className="text-white">%{currentPortfolio.riskPerTradePct}</strong>
             </span>
           </div>
         </div>
+
+        {/* Market Regime Warning if Bearish */}
+        {currentRegime && currentRegime.trend === 'BEARISH' && (
+          <div className="p-3.5 rounded-xl bg-danger-500/10 border border-danger-500/30 text-danger-300 text-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-danger-400 flex-shrink-0" />
+              <div>
+                <strong className="text-white">Piyasa Koruma Modu Aktif:</strong> {currentRegime.reason}
+              </div>
+            </div>
+            <span className="text-[11px] px-2 py-0.5 rounded bg-danger-500/20 text-danger-300 font-semibold uppercase flex-shrink-0">
+              Yeni Alımlar Kilitlendi
+            </span>
+          </div>
+        )}
 
         {/* TAB 1: DASHBOARD */}
         {activeTab === 'DASHBOARD' && (
@@ -317,22 +318,22 @@ export default function HomePage() {
               <div className="space-y-4">
                 <EquityChart data={currentPortfolio.equityCurve} />
 
-                {/* Automation & Rules Info */}
+                {/* Safety & Automation Card */}
                 <div className="p-4 rounded-xl bg-card border border-border text-xs space-y-2.5">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-white flex items-center gap-1.5">
-                      <Activity className="w-4 h-4 text-emerald-400" />
-                      <span>{activeMarket === 'BIST' ? 'BIST' : 'ABD'} Canlı Bot Kuralları</span>
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span>{activeMarket === 'BIST' ? 'BIST' : 'ABD'} Güvenlik Kalkanı</span>
                     </h3>
                     <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold">
-                      Oto-Alım Açık
+                      Korumalar Aktif
                     </span>
                   </div>
                   <ul className="text-muted space-y-1.5 list-disc pl-4 text-[11px]">
-                    <li>Başlangıç bütçesi: <strong className="text-white">{activeMarket === 'BIST' ? '10.000 TL' : '$500 USD'}</strong></li>
-                    <li>İşlem başına maksimum %{currentPortfolio.riskPerTradePct} sermaye riski.</li>
-                    <li>Stop-Loss veya TP2 gerçekleştiğinde otomatik kâr/zarar realizesi.</li>
-                    <li>{currentPortfolio.maxHoldingDays} gün dolduğunda vade sonu çıkışı.</li>
+                    <li><strong>Kademeli Kâr Alma:</strong> TP1'de %50 kâr cebe konur, stop maliyete çekilir.</li>
+                    <li><strong>Başa-Baş Stop:</strong> Kâra geçmiş işlem asla zararla kapanmaz.</li>
+                    <li><strong>Endeks Filtresi:</strong> Piyasa düşüş trendindeyse yeni risk alınmaz.</li>
+                    <li><strong>Sektör Sınırı:</strong> Aynı sektörden en fazla 2 hisseye izin verilir.</li>
                   </ul>
                 </div>
               </div>
@@ -360,7 +361,6 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* Settings Modal */}
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}

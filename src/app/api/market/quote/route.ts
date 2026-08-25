@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchStockCandles, calculateTechnicals } from '@/lib/marketData';
+import { fetchStockCandles, calculateTechnicals, COMBINED_UNIVERSE } from '@/lib/marketData';
 import { evaluateSignal } from '@/lib/strategyEngine';
-import { MarketType, CurrencyType } from '@/lib/types';
+import { MarketType, CurrencyType, SectorType } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,18 +20,22 @@ export async function GET(request: NextRequest) {
     const market: MarketType = isBist ? 'BIST' : 'US';
     const currency: CurrencyType = isBist ? 'TRY' : 'USD';
 
+    const match = COMBINED_UNIVERSE.find(u => u.ticker === ticker);
+    const sector: SectorType = match ? match.sector : 'Technology';
+
     const candles = await fetchStockCandles(ticker, range);
     if (candles.length === 0) {
       return NextResponse.json({ success: false, error: `${ticker} için veri bulunamadı.` }, { status: 404 });
     }
 
     const technicals = calculateTechnicals(candles);
-    const signal = technicals ? evaluateSignal(ticker, displayTicker, market, currency, technicals, candles) : null;
+    const signal = technicals ? evaluateSignal(ticker, displayTicker, sector, market, currency, technicals, candles) : null;
 
     return NextResponse.json({
       success: true,
       ticker,
       displayTicker,
+      sector,
       market,
       currency,
       candles,

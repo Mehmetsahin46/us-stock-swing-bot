@@ -1,6 +1,7 @@
 export type MarketType = 'US' | 'BIST';
 export type CurrencyType = 'USD' | 'TRY';
 export type StrategyType = 'EMA_PULLBACK' | 'BREAKOUT' | 'OVERSOLD_BOUNCE';
+export type SectorType = 'Technology' | 'Semiconductors' | 'Banking' | 'Aviation' | 'Energy' | 'Retail' | 'Automotive' | 'Industrial' | 'Crypto/Fintech' | 'Index';
 
 export interface Candle {
   date: string;
@@ -33,16 +34,30 @@ export interface StockScanResult {
   ticker: string;
   displayTicker: string;
   name: string;
+  sector: SectorType;
   market: MarketType;
   currency: CurrencyType;
   technicals: TechnicalIndicators;
   signal: Signal | null;
 }
 
+export interface MarketRegime {
+  market: MarketType;
+  ticker: string;
+  price: number;
+  ema50: number;
+  trend: 'BULLISH' | 'BEARISH';
+  changePercent: number;
+  rsi14: number;
+  allowNewBuys: boolean;
+  reason: string;
+}
+
 export interface Signal {
   id: string;
   ticker: string;
   displayTicker: string;
+  sector: SectorType;
   market: MarketType;
   currency: CurrencyType;
   strategy: StrategyType;
@@ -65,6 +80,7 @@ export type PositionStatus =
   | 'CLOSED_TP1'
   | 'CLOSED_TP2'
   | 'CLOSED_SL'
+  | 'CLOSED_BREAKEVEN'
   | 'CLOSED_EXPIRED'
   | 'CLOSED_MANUAL';
 
@@ -72,17 +88,22 @@ export interface TradePosition {
   id: string;
   ticker: string;
   displayTicker: string;
+  sector: SectorType;
   market: MarketType;
   currency: CurrencyType;
   strategy: StrategyType;
   strategyName: string;
   entryDate: string;
   entryPrice: number;
+  initialShares: number;
   shares: number;
   totalCost: number;
+  originalStopLoss: number;
   stopLoss: number;
   target1: number;
   target2: number;
+  tp1Hit: boolean;
+  isBreakeven: boolean;
   currentPrice: number;
   highestPriceSinceEntry: number;
   lowestPriceSinceEntry: number;
@@ -116,6 +137,9 @@ export interface MarketPortfolio {
   maxOpenPositions: number;
   maxHoldingDays: number;
   autoTrade: boolean;
+  useMarketRegimeFilter: boolean;
+  useBreakevenTrailing: boolean;
+  usePartialTakeProfit: boolean;
   positions: TradePosition[];
   history: TradePosition[];
   equityCurve: { date: string; equity: number }[];
@@ -124,6 +148,8 @@ export interface MarketPortfolio {
 export interface DualPortfolioState {
   bist: MarketPortfolio;
   us: MarketPortfolio;
+  bistRegime: MarketRegime | null;
+  usRegime: MarketRegime | null;
   lastScanTime: string | null;
   lastCronTime: string | null;
   activityLogs: Array<{ id: string; timestamp: string; market: MarketType; message: string; type: 'BUY' | 'SELL' | 'INFO' }>;

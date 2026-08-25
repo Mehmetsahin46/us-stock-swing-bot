@@ -110,7 +110,7 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
         const technicals = calculateTechnicals(historicalSlice);
         if (!technicals) continue;
 
-        const signal = evaluateSignal(item.ticker, item.displayTicker, item.market, item.currency, technicals, historicalSlice);
+        const signal = evaluateSignal(item.ticker, item.displayTicker, item.sector, item.market, item.currency, technicals, historicalSlice);
         if (signal && (!params.strategies || params.strategies.length === 0 || params.strategies.includes(signal.strategy))) {
           const riskAmount = totalEquity * (riskPerTradePct / 100);
           const riskPerShare = Math.max(0.1, signal.suggestedEntry - signal.stopLoss);
@@ -127,17 +127,22 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
               id: `bt_${item.ticker}_${currentDate}`,
               ticker: item.ticker,
               displayTicker: item.displayTicker,
+              sector: item.sector,
               market: item.market,
               currency: item.currency,
               strategy: signal.strategy,
               strategyName: signal.strategyName,
               entryDate: currentDate,
               entryPrice: signal.suggestedEntry,
+              initialShares: shares,
               shares,
               totalCost: cost,
+              originalStopLoss: signal.stopLoss,
               stopLoss: signal.stopLoss,
               target1: signal.target1,
               target2: signal.target2,
+              tp1Hit: false,
+              isBreakeven: false,
               currentPrice: signal.suggestedEntry,
               highestPriceSinceEntry: signal.suggestedEntry,
               lowestPriceSinceEntry: signal.suggestedEntry,

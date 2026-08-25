@@ -18,7 +18,13 @@ export function openPositionForMarket(
     return { portfolio: currentPortfolio, success: false, message: `Maksimum açık pozisyon limitine (${portfolio.maxOpenPositions}) ulaşıldı.` };
   }
 
-  // 3. Position Sizing: Risk per trade = 2% of total equity
+  // 3. Sector Diversification Check (Max 2 positions per sector)
+  const sameSectorCount = portfolio.positions.filter(p => p.status === 'OPEN' && p.sector === signal.sector).length;
+  if (sameSectorCount >= 2 && signal.sector !== 'Index') {
+    return { portfolio: currentPortfolio, success: false, message: `${signal.sector} sektöründen zaten 2 açık pozisyon var. Risk çeşitlendirmesi için engellendi.` };
+  }
+
+  // 4. Position Sizing: Risk per trade = 2% of total equity
   const riskAmount = portfolio.totalEquity * (portfolio.riskPerTradePct / 100);
   const riskPerShare = Math.max(0.1, signal.suggestedEntry - signal.stopLoss);
   let shares = Math.floor(riskAmount / riskPerShare);
@@ -44,17 +50,22 @@ export function openPositionForMarket(
     id: `pos_${signal.ticker}_${Date.now()}`,
     ticker: signal.ticker,
     displayTicker: signal.displayTicker,
+    sector: signal.sector,
     market: signal.market,
     currency: signal.currency,
     strategy: signal.strategy,
     strategyName: signal.strategyName,
     entryDate: new Date().toISOString().split('T')[0],
     entryPrice: signal.suggestedEntry,
+    initialShares: shares,
     shares,
     totalCost: Number(totalCost.toFixed(2)),
+    originalStopLoss: signal.stopLoss,
     stopLoss: signal.stopLoss,
     target1: signal.target1,
     target2: signal.target2,
+    tp1Hit: false,
+    isBreakeven: false,
     currentPrice: signal.suggestedEntry,
     highestPriceSinceEntry: signal.suggestedEntry,
     lowestPriceSinceEntry: signal.suggestedEntry,
@@ -73,7 +84,7 @@ export function openPositionForMarket(
   return {
     portfolio,
     success: true,
-    message: `${shares} adet ${signal.displayTicker} (${signal.market}) ${currSign}${signal.suggestedEntry.toFixed(2)} fiyattan alındı (Stop: ${currSign}${signal.stopLoss}, Hedef: ${currSign}${signal.target2}).`
+    message: `${shares} adet ${signal.displayTicker} (${signal.market}) ${currSign}${signal.suggestedEntry.toFixed(2)} fiyattan alındı (Stop: ${currSign}${signal.stopLoss}, TP1: ${currSign}${signal.target1}, TP2: ${currSign}${signal.target2}).`
   };
 }
 
@@ -95,33 +106,64 @@ export function updateMarketPositionsWithQuotes(
     pos.highestPriceSinceEntry = Math.max(pos.highestPriceSinceEntry, currentPrice);
     pos.lowestPriceSinceEntry = Math.min(pos.lowestPriceSinceEntry, currentPrice);
 
+    const currSign = portfolio.currencySymbol;
+
+    // 1. Partial Take Profit (TP1 Hit -> Take 50% profit & Move Stop to Entry Price / Breakeven)
+    if (portfolio.usePartialTakeProfit && !pos.tp1Hit && currentPrice >= pos.target1) {
+      pos.tp1Hit = true;
+      pos.isBreakeven = true;
+      pos.stopLoss = pos.entryPrice; // Stop to Breakeven!
+
+      const sharesToSell = Math.ceil(pos.shares / 2);
+      if (sharesToSell > 0 && pos.shares > sharesToSell) {
+        const partialProfit = Number(((pos.target1 - pos.entryPrice) * sharesToSell).toFixed(2));
+        pos.shares -= sharesToSell;
+        pos.realizedPnL = Number((pos.realizedPnL + partialProfit).toFixed(2));
+        portfolio.cash = Number((portfolio.cash + sharesToSell * pos.target1).toFixed(2));
+        events.push(`🎯 ${pos.displayTicker} TP1 seviyesine (${currSign}${pos.target1}) ulaştı! %50 kâr realize edildi (+${currSign}${partialProfit}), Stop Maliyete (${currSign}${pos.entryPrice}) çekilerek kilitlendi.`);
+      }
+    }
+
+    // 2. Trailing Stop after TP1 (Keep moving stop higher as price climbs)
+    if (portfolio.useBreakevenTrailing && pos.tp1Hit && currentPrice > pos.target1) {
+      const trailingBuffer = (pos.target1 - pos.entryPrice) * 0.4;
+      const potentialNewStop = Number((currentPrice - trailingBuffer).toFixed(2));
+      if (potentialNewStop > pos.stopLoss) {
+        pos.stopLoss = potentialNewStop;
+      }
+    }
+
     pos.unrealizedPnL = Number(((currentPrice - pos.entryPrice) * pos.shares).toFixed(2));
     pos.unrealizedPnLPct = Number((((currentPrice - pos.entryPrice) / pos.entryPrice) * 100).toFixed(2));
-
-    const currSign = portfolio.currencySymbol;
 
     let shouldClose = false;
     let exitReason = '';
     let exitStatus: TradePosition['status'] = 'OPEN';
     let exitPrice = currentPrice;
 
-    // 1. Stop-Loss
+    // 3. Stop-Loss Trigger
     if (currentPrice <= pos.stopLoss) {
       shouldClose = true;
-      exitStatus = 'CLOSED_SL';
       exitPrice = pos.stopLoss;
-      exitReason = `Stop-Loss (${currSign}${pos.stopLoss}) tetiklendi.`;
-      events.push(`🛑 ${pos.displayTicker} Stop-Loss seviyesine (${currSign}${pos.stopLoss}) ulaştı ve kapatıldı. Sonuç: %${pos.unrealizedPnLPct}`);
+      if (pos.isBreakeven) {
+        exitStatus = 'CLOSED_BREAKEVEN';
+        exitReason = `Kalan %50 pozisyon Başa-Baş Stop seviyesinde (${currSign}${pos.stopLoss}) sıfır riskle kapatıldı. (TP1 kârı korundu)`;
+        events.push(`🛡️ ${pos.displayTicker} Başa-baş seviyesinde kapatıldı. Kâr korundu!`);
+      } else {
+        exitStatus = 'CLOSED_SL';
+        exitReason = `Stop-Loss (${currSign}${pos.stopLoss}) tetiklendi.`;
+        events.push(`🛑 ${pos.displayTicker} Stop-Loss seviyesine (${currSign}${pos.stopLoss}) ulaştı ve kapatıldı. Sonuç: %${pos.unrealizedPnLPct}`);
+      }
     }
-    // 2. Take-Profit 2
+    // 4. Take-Profit 2 (Full Target Reached)
     else if (currentPrice >= pos.target2) {
       shouldClose = true;
       exitStatus = 'CLOSED_TP2';
       exitPrice = pos.target2;
       exitReason = `Ana Kâr Hedefi (${currSign}${pos.target2}) gerçekleşti!`;
-      events.push(`🎯 ${pos.displayTicker} Ana Kâr Hedefine (${currSign}${pos.target2}) ulaştı! Kâr: +%${pos.unrealizedPnLPct}`);
+      events.push(`🚀 ${pos.displayTicker} Ana Kâr Hedefine (${currSign}${pos.target2}) ulaştı! Kâr: +%${pos.unrealizedPnLPct}`);
     }
-    // 3. Max holding days expiration (14 days)
+    // 5. Max Holding Period Expiration (14 Days)
     else if (pos.daysHeld >= pos.maxHoldingDays) {
       shouldClose = true;
       exitStatus = 'CLOSED_EXPIRED';
@@ -135,8 +177,9 @@ export function updateMarketPositionsWithQuotes(
       pos.exitDate = todayStr;
       pos.exitPrice = exitPrice;
       pos.exitReason = exitReason;
-      pos.realizedPnL = Number(((exitPrice - pos.entryPrice) * pos.shares).toFixed(2));
-      pos.realizedPnLPct = Number((((exitPrice - pos.entryPrice) / pos.entryPrice) * 100).toFixed(2));
+      const finalLegPnL = Number(((exitPrice - pos.entryPrice) * pos.shares).toFixed(2));
+      pos.realizedPnL = Number((pos.realizedPnL + finalLegPnL).toFixed(2));
+      pos.realizedPnLPct = Number((((pos.realizedPnL) / (pos.entryPrice * pos.initialShares)) * 100).toFixed(2));
       pos.unrealizedPnL = 0;
       pos.unrealizedPnLPct = 0;
 
@@ -172,8 +215,9 @@ export function manuallyClosePositionInMarket(
   pos.exitDate = new Date().toISOString().split('T')[0];
   pos.exitPrice = exitPrice;
   pos.exitReason = 'Kullanıcı tarafından manuel olarak kapatıldı.';
-  pos.realizedPnL = Number(((exitPrice - pos.entryPrice) * pos.shares).toFixed(2));
-  pos.realizedPnLPct = Number((((exitPrice - pos.entryPrice) / pos.entryPrice) * 100).toFixed(2));
+  const finalLegPnL = Number(((exitPrice - pos.entryPrice) * pos.shares).toFixed(2));
+  pos.realizedPnL = Number((pos.realizedPnL + finalLegPnL).toFixed(2));
+  pos.realizedPnLPct = Number((((pos.realizedPnL) / (pos.entryPrice * pos.initialShares)) * 100).toFixed(2));
   pos.unrealizedPnL = 0;
   pos.unrealizedPnLPct = 0;
 

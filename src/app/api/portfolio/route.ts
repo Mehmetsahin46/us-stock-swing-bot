@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDualPortfolioState, saveDualPortfolioState } from '@/lib/serverStore';
+import { INITIAL_BIST_PORTFOLIO, INITIAL_US_PORTFOLIO } from '@/lib/constants';
 import { DualPortfolioState } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -16,53 +17,10 @@ export async function POST(request: NextRequest) {
     const currentState = getDualPortfolioState();
 
     if (body.action === 'RESET_MARKET' && (body.market === 'BIST' || body.market === 'US')) {
-      const today = new Date().toISOString().split('T')[0];
       if (body.market === 'BIST') {
-        currentState.bist = {
-          market: 'BIST',
-          currency: 'TRY',
-          currencySymbol: '₺',
-          initialBalance: 10000,
-          cash: 10000,
-          totalEquity: 10000,
-          realizedPnL: 0,
-          unrealizedPnL: 0,
-          winRate: 0,
-          totalTrades: 0,
-          winningTrades: 0,
-          losingTrades: 0,
-          profitFactor: 0,
-          riskPerTradePct: 2.0,
-          maxOpenPositions: 5,
-          maxHoldingDays: 14,
-          autoTrade: true,
-          positions: [],
-          history: [],
-          equityCurve: [{ date: today, equity: 10000 }]
-        };
+        currentState.bist = JSON.parse(JSON.stringify(INITIAL_BIST_PORTFOLIO));
       } else {
-        currentState.us = {
-          market: 'US',
-          currency: 'USD',
-          currencySymbol: '$',
-          initialBalance: 500,
-          cash: 500,
-          totalEquity: 500,
-          realizedPnL: 0,
-          unrealizedPnL: 0,
-          winRate: 0,
-          totalTrades: 0,
-          winningTrades: 0,
-          losingTrades: 0,
-          profitFactor: 0,
-          riskPerTradePct: 2.0,
-          maxOpenPositions: 4,
-          maxHoldingDays: 14,
-          autoTrade: true,
-          positions: [],
-          history: [],
-          equityCurve: [{ date: today, equity: 500 }]
-        };
+        currentState.us = JSON.parse(JSON.stringify(INITIAL_US_PORTFOLIO));
       }
       saveDualPortfolioState(currentState);
       return NextResponse.json({ success: true, state: currentState });

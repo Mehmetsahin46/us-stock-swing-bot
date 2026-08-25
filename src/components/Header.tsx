@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Activity, RefreshCw, Settings, CheckCircle2, Clock, CloudLightning } from 'lucide-react';
-import { MarketType } from '@/lib/types';
+import { Activity, RefreshCw, Settings, CheckCircle2, Clock, CloudLightning, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { MarketRegime, MarketType } from '@/lib/types';
 
 interface HeaderProps {
   onScan: () => void;
@@ -13,6 +13,8 @@ interface HeaderProps {
   onSelectMarket: (m: MarketType) => void;
   bistAuto: boolean;
   usAuto: boolean;
+  bistRegime: MarketRegime | null;
+  usRegime: MarketRegime | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -23,7 +25,9 @@ export const Header: React.FC<HeaderProps> = ({
   activeMarket,
   onSelectMarket,
   bistAuto,
-  usAuto
+  usAuto,
+  bistRegime,
+  usRegime
 }) => {
   const [usStatus, setUsStatus] = useState<{ isOpen: boolean; text: string }>({
     isOpen: false,
@@ -38,7 +42,6 @@ export const Header: React.FC<HeaderProps> = ({
     function checkHours() {
       const now = new Date();
 
-      // US Market (9:30 - 16:00 ET, Mon-Fri)
       const nyOptions: Intl.DateTimeFormatOptions = { timeZone: 'America/New_York', hour12: false };
       const nyDay = new Intl.DateTimeFormat('en-US', { ...nyOptions, weekday: 'short' }).format(now);
       const nyHour = parseInt(new Intl.DateTimeFormat('en-US', { ...nyOptions, hour: 'numeric' }).format(now), 10);
@@ -51,7 +54,6 @@ export const Header: React.FC<HeaderProps> = ({
         text: isNyOpen ? '🇺🇸 ABD: AÇIK' : '🇺🇸 ABD: KAPALI'
       });
 
-      // BIST Market (10:00 - 18:00 TSİ, Mon-Fri)
       const istOptions: Intl.DateTimeFormatOptions = { timeZone: 'Europe/Istanbul', hour12: false };
       const istDay = new Intl.DateTimeFormat('en-US', { ...istOptions, weekday: 'short' }).format(now);
       const istHour = parseInt(new Intl.DateTimeFormat('en-US', { ...istOptions, hour: 'numeric' }).format(now), 10);
@@ -70,6 +72,8 @@ export const Header: React.FC<HeaderProps> = ({
     return () => clearInterval(interval);
   }, []);
 
+  const currentRegime = activeMarket === 'BIST' ? bistRegime : usRegime;
+
   return (
     <header className="border-b border-border bg-surface/90 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-3">
@@ -85,12 +89,11 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
           <p className="text-xs text-muted">
-            🇹🇷 10.000 TL BIST & 🇺🇸 500$ ABD Otomatik Swing Botu
+            🇹🇷 10.000 TL BIST & 🇺🇸 500$ ABD Güvenli Swing Botu
           </p>
         </div>
       </div>
 
-      {/* Center Market Switcher */}
       <div className="flex items-center bg-card border border-border rounded-xl p-1 text-xs">
         <button
           onClick={() => onSelectMarket('BIST')}
@@ -119,8 +122,18 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
       </div>
 
-      {/* Right controls */}
       <div className="flex items-center flex-wrap gap-2">
+        {currentRegime && (
+          <div className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold ${
+            currentRegime.trend === 'BULLISH'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+              : 'bg-danger-500/10 border-danger-500/30 text-danger-400'
+          }`} title={currentRegime.reason}>
+            {currentRegime.trend === 'BULLISH' ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+            <span>{currentRegime.trend === 'BULLISH' ? 'Endeks: Boğa' : 'Endeks: Ayı (Korumada)'}</span>
+          </div>
+        )}
+
         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${
           bistStatus.isOpen 
             ? 'bg-primary-500/10 border-primary-500/30 text-primary-400' 
@@ -139,26 +152,19 @@ export const Header: React.FC<HeaderProps> = ({
           <span>{usStatus.text}</span>
         </div>
 
-        {lastScanTime && (
-          <div className="hidden xl:flex items-center gap-1 text-xs text-muted px-2 py-1 rounded-lg bg-card border border-border">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span>{new Date(lastScanTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-        )}
-
         <button
           onClick={onScan}
           disabled={isScanning}
           className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 active:scale-95 disabled:opacity-50 text-white text-xs font-semibold shadow-md shadow-primary-500/20 transition-all cursor-pointer"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
-          <span>{isScanning ? 'Taranıyor...' : 'Piyasaları Tara'}</span>
+          <span>{isScanning ? 'Taranıyor...' : 'Tara & Oto-Trade'}</span>
         </button>
 
         <button
           onClick={onOpenSettings}
           className="p-1.5 rounded-lg bg-card hover:bg-slate-800 border border-border text-slate-300 hover:text-white transition-colors cursor-pointer"
-          title="Bot Ayarları"
+          title="Bot ve Güvenlik Ayarları"
         >
           <Settings className="w-4 h-4" />
         </button>

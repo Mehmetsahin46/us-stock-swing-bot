@@ -20,6 +20,9 @@ export const INITIAL_BIST_PORTFOLIO: MarketPortfolio = {
   maxOpenPositions: 5,
   maxHoldingDays: 14,
   autoTrade: true,
+  useMarketRegimeFilter: true,
+  useBreakevenTrailing: true,
+  usePartialTakeProfit: true,
   positions: [],
   history: [],
   equityCurve: [{ date: today, equity: 10000 }]
@@ -43,6 +46,9 @@ export const INITIAL_US_PORTFOLIO: MarketPortfolio = {
   maxOpenPositions: 4,
   maxHoldingDays: 14,
   autoTrade: true,
+  useMarketRegimeFilter: true,
+  useBreakevenTrailing: true,
+  usePartialTakeProfit: true,
   positions: [],
   history: [],
   equityCurve: [{ date: today, equity: 500 }]
@@ -51,6 +57,8 @@ export const INITIAL_US_PORTFOLIO: MarketPortfolio = {
 export const INITIAL_DUAL_STATE: DualPortfolioState = {
   bist: INITIAL_BIST_PORTFOLIO,
   us: INITIAL_US_PORTFOLIO,
+  bistRegime: null,
+  usRegime: null,
   lastScanTime: null,
   lastCronTime: null,
   activityLogs: []

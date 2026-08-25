@@ -1,8 +1,9 @@
-import { Candle, CurrencyType, MarketType, Signal, StrategyType, TechnicalIndicators } from './types';
+import { Candle, CurrencyType, MarketType, SectorType, Signal, StrategyType, TechnicalIndicators } from './types';
 
 export function evaluateSignal(
   ticker: string,
   displayTicker: string,
+  sector: SectorType,
   market: MarketType,
   currency: CurrencyType,
   tech: TechnicalIndicators,
@@ -30,6 +31,7 @@ export function evaluateSignal(
         id: `sig_${ticker}_${Date.now()}`,
         ticker,
         displayTicker,
+        sector,
         market,
         currency,
         strategy: 'EMA_PULLBACK',
@@ -67,6 +69,7 @@ export function evaluateSignal(
         id: `sig_${ticker}_${Date.now()}`,
         ticker,
         displayTicker,
+        sector,
         market,
         currency,
         strategy: 'BREAKOUT',
@@ -103,6 +106,7 @@ export function evaluateSignal(
         id: `sig_${ticker}_${Date.now()}`,
         ticker,
         displayTicker,
+        sector,
         market,
         currency,
         strategy: 'OVERSOLD_BOUNCE',

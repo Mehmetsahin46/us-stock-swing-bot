@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { TradePosition } from '@/lib/types';
-import { Clock, Target, AlertOctagon, XCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Clock, Target, AlertOctagon, XCircle, ArrowUpRight, ArrowDownRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 interface ActiveTradesProps {
   positions: TradePosition[];
@@ -20,7 +20,7 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
         </div>
         <h3 className="text-sm font-semibold text-white">Şu Anda Açık Demo Pozisyon Yok</h3>
         <p className="text-xs text-muted max-w-sm mx-auto mt-1">
-          Canlı Piyasa Tarayıcısı sekmesinden ABD veya BIST hisselerinde tespit edilen sinyallerle sanal pozisyon açabilirsiniz.
+          Canlı Piyasa Tarayıcısı üzerinden sinyal veren hisselerden sanal pozisyon açabilir veya botun piyasa açılışında otomatik işlem yapmasını bekleyebilirsiniz.
         </p>
       </div>
     );
@@ -33,9 +33,9 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
           <tr className="border-b border-border/80 bg-surface/50 text-muted font-medium">
             <th className="py-3 px-4">Hisse & Strateji</th>
             <th className="py-3 px-4">Giriş / Anlık</th>
-            <th className="py-3 px-4">Adet / Maliyet</th>
+            <th className="py-3 px-4">Kalan Lot / Maliyet</th>
             <th className="py-3 px-4">Kâr / Zarar (PnL)</th>
-            <th className="py-3 px-4">Hedef (TP) / Stop (SL)</th>
+            <th className="py-3 px-4">Güvenlik & Seviyeler</th>
             <th className="py-3 px-4">Vade Süresi</th>
             <th className="py-3 px-4 text-right">İşlem</th>
           </tr>
@@ -62,9 +62,19 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
                         }`}>
                           {pos.market === 'BIST' ? '🇹🇷 BIST' : '🇺🇸 US'}
                         </span>
+                        {pos.tp1Hit && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-0.5">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> TP1 Alındı
+                          </span>
+                        )}
+                        {pos.isBreakeven && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-accent-500/20 text-accent-400 border border-accent-500/30 font-bold flex items-center gap-0.5">
+                            <ShieldCheck className="w-2.5 h-2.5" /> Başa-Baş Stop
+                          </span>
+                        )}
                       </div>
                       <div className="text-[11px] text-muted mt-0.5">
-                        {pos.strategyName}
+                        {pos.strategyName} • <span className="text-slate-400">{pos.sector}</span>
                       </div>
                     </div>
                   </div>
@@ -81,10 +91,10 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
 
                 <td className="py-3.5 px-4">
                   <div className="text-white font-medium">
-                    {pos.shares} Lot
+                    {pos.shares} Lot {pos.shares < pos.initialShares && <span className="text-muted text-[10px]">({pos.initialShares} baştan)</span>}
                   </div>
                   <div className="text-[11px] text-muted">
-                    {currSign}{pos.totalCost.toFixed(2)}
+                    {currSign}{(pos.shares * pos.entryPrice).toFixed(2)}
                   </div>
                 </td>
 
@@ -94,15 +104,20 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
                     <span>{isProfit ? '+' : ''}{currSign}{pos.unrealizedPnL.toFixed(2)}</span>
                     <span className="text-[11px] font-semibold">({isProfit ? '+' : ''}{pos.unrealizedPnLPct}%)</span>
                   </div>
+                  {pos.realizedPnL > 0 && (
+                    <div className="text-[10px] text-emerald-400 font-semibold">
+                      +{currSign}{pos.realizedPnL.toFixed(2)} cepte
+                    </div>
+                  )}
                 </td>
 
-                <td className="py-3.5 px-4 min-w-[160px]">
+                <td className="py-3.5 px-4 min-w-[170px]">
                   <div className="flex justify-between text-[11px] mb-1">
-                    <span className="text-danger-400 flex items-center gap-0.5">
-                      <AlertOctagon className="w-3 h-3" /> {currSign}{pos.stopLoss.toFixed(2)}
+                    <span className={`flex items-center gap-0.5 ${pos.isBreakeven ? 'text-accent-400 font-bold' : 'text-danger-400'}`}>
+                      <AlertOctagon className="w-3 h-3" /> Stop: {currSign}{pos.stopLoss.toFixed(2)}
                     </span>
                     <span className="text-primary-400 flex items-center gap-0.5">
-                      <Target className="w-3 h-3" /> {currSign}{pos.target2.toFixed(2)}
+                      <Target className="w-3 h-3" /> TP2: {currSign}{pos.target2.toFixed(2)}
                     </span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden relative">
