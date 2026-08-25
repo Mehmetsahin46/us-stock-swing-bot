@@ -36,57 +36,51 @@ export async function GET() {
     dualState.us = updatedUs;
     logs.push(...usCloseEvents);
 
+    // Auto-Trade for BIST (Score >= 60)
     if (dualState.bist.autoTrade) {
-      if (dualState.bist.useMarketRegimeFilter && !bistRegime.allowNewBuys) {
-        logs.push(`🛡️ [BIST KORUMA] ${bistRegime.reason}`);
-      } else {
-        const bistSignals: Signal[] = scanResults
-          .filter(r => r.market === 'BIST' && r.signal !== null)
-          .map(r => r.signal as Signal)
-          .sort((a, b) => b.score - a.score);
+      const bistSignals: Signal[] = scanResults
+        .filter(r => r.market === 'BIST' && r.signal !== null)
+        .map(r => r.signal as Signal)
+        .sort((a, b) => b.score - a.score);
 
-        for (const sig of bistSignals) {
-          if (sig.score >= 70) {
-            const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.bist);
-            if (success) {
-              dualState.bist = afterTrade;
-              logs.push(`[BIST AUTO] ${message}`);
-              dualState.activityLogs.unshift({
-                id: `log_${Date.now()}_${sig.ticker}`,
-                timestamp: startTime,
-                market: 'BIST',
-                message,
-                type: 'BUY'
-              });
-            }
+      for (const sig of bistSignals) {
+        if (sig.score >= 60) {
+          const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.bist);
+          if (success) {
+            dualState.bist = afterTrade;
+            logs.push(`[BIST AUTO] ${message}`);
+            dualState.activityLogs.unshift({
+              id: `log_${Date.now()}_${sig.ticker}`,
+              timestamp: startTime,
+              market: 'BIST',
+              message,
+              type: 'BUY'
+            });
           }
         }
       }
     }
 
+    // Auto-Trade for US (Score >= 60)
     if (dualState.us.autoTrade) {
-      if (dualState.us.useMarketRegimeFilter && !usRegime.allowNewBuys) {
-        logs.push(`🛡️ [US KORUMA] ${usRegime.reason}`);
-      } else {
-        const usSignals: Signal[] = scanResults
-          .filter(r => r.market === 'US' && r.signal !== null)
-          .map(r => r.signal as Signal)
-          .sort((a, b) => b.score - a.score);
+      const usSignals: Signal[] = scanResults
+        .filter(r => r.market === 'US' && r.signal !== null)
+        .map(r => r.signal as Signal)
+        .sort((a, b) => b.score - a.score);
 
-        for (const sig of usSignals) {
-          if (sig.score >= 70) {
-            const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.us);
-            if (success) {
-              dualState.us = afterTrade;
-              logs.push(`[US AUTO] ${message}`);
-              dualState.activityLogs.unshift({
-                id: `log_${Date.now()}_${sig.ticker}`,
-                timestamp: startTime,
-                market: 'US',
-                message,
-                type: 'BUY'
-              });
-            }
+      for (const sig of usSignals) {
+        if (sig.score >= 60) {
+          const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.us);
+          if (success) {
+            dualState.us = afterTrade;
+            logs.push(`[US AUTO] ${message}`);
+            dualState.activityLogs.unshift({
+              id: `log_${Date.now()}_${sig.ticker}`,
+              timestamp: startTime,
+              market: 'US',
+              message,
+              type: 'BUY'
+            });
           }
         }
       }
@@ -97,18 +91,16 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      job: 'automated-safe-dual-market-cron',
+      job: 'automated-dual-market-cron-v5',
       timestamp: startTime,
       scannedCount: scanResults.length,
-      bistRegime: bistRegime.trend,
-      usRegime: usRegime.trend,
       bistOpenCount: dualState.bist.positions.length,
       usOpenCount: dualState.us.positions.length,
       eventsLogged: logs.length,
       logs
     });
   } catch (error) {
-    console.error('Safe automated cron failed:', error);
+    console.error('Automated cron failed:', error);
     return NextResponse.json({ success: false, error: 'Cron işlemi sırasında hata oluştu.' }, { status: 500 });
   }
 }

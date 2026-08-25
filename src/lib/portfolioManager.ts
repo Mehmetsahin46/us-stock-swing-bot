@@ -18,13 +18,13 @@ export function openPositionForMarket(
     return { portfolio: currentPortfolio, success: false, message: `Maksimum açık pozisyon limitine (${portfolio.maxOpenPositions}) ulaşıldı.` };
   }
 
-  // 3. Sector Diversification Check (Max 2 positions per sector)
+  // 3. Sector Diversification Check (Max 4 positions per sector)
   const sameSectorCount = portfolio.positions.filter(p => p.status === 'OPEN' && p.sector === signal.sector).length;
-  if (sameSectorCount >= 2 && signal.sector !== 'Index') {
-    return { portfolio: currentPortfolio, success: false, message: `${signal.sector} sektöründen zaten 2 açık pozisyon var. Risk çeşitlendirmesi için engellendi.` };
+  if (sameSectorCount >= 4 && signal.sector !== 'Index') {
+    return { portfolio: currentPortfolio, success: false, message: `${signal.sector} sektöründen zaten ${sameSectorCount} açık pozisyon var.` };
   }
 
-  // 4. Position Sizing: Risk per trade = 2% of total equity
+  // 4. Position Sizing: Risk per trade = 3.5% of total equity
   const riskAmount = portfolio.totalEquity * (portfolio.riskPerTradePct / 100);
   const riskPerShare = Math.max(0.1, signal.suggestedEntry - signal.stopLoss);
   let shares = Math.floor(riskAmount / riskPerShare);
@@ -112,7 +112,7 @@ export function updateMarketPositionsWithQuotes(
     if (portfolio.usePartialTakeProfit && !pos.tp1Hit && currentPrice >= pos.target1) {
       pos.tp1Hit = true;
       pos.isBreakeven = true;
-      pos.stopLoss = pos.entryPrice; // Stop to Breakeven!
+      pos.stopLoss = pos.entryPrice;
 
       const sharesToSell = Math.ceil(pos.shares / 2);
       if (sharesToSell > 0 && pos.shares > sharesToSell) {
@@ -120,11 +120,11 @@ export function updateMarketPositionsWithQuotes(
         pos.shares -= sharesToSell;
         pos.realizedPnL = Number((pos.realizedPnL + partialProfit).toFixed(2));
         portfolio.cash = Number((portfolio.cash + sharesToSell * pos.target1).toFixed(2));
-        events.push(`🎯 ${pos.displayTicker} TP1 seviyesine (${currSign}${pos.target1}) ulaştı! %50 kâr realize edildi (+${currSign}${partialProfit}), Stop Maliyete (${currSign}${pos.entryPrice}) çekilerek kilitlendi.`);
+        events.push(`🎯 ${pos.displayTicker} TP1 seviyesine (${currSign}${pos.target1}) ulaştı! %50 kâr realize edildi (+${currSign}${partialProfit}), Stop Maliyete (${currSign}${pos.entryPrice}) çekildi.`);
       }
     }
 
-    // 2. Trailing Stop after TP1 (Keep moving stop higher as price climbs)
+    // 2. Trailing Stop after TP1
     if (portfolio.useBreakevenTrailing && pos.tp1Hit && currentPrice > pos.target1) {
       const trailingBuffer = (pos.target1 - pos.entryPrice) * 0.4;
       const potentialNewStop = Number((currentPrice - trailingBuffer).toFixed(2));
@@ -147,7 +147,7 @@ export function updateMarketPositionsWithQuotes(
       exitPrice = pos.stopLoss;
       if (pos.isBreakeven) {
         exitStatus = 'CLOSED_BREAKEVEN';
-        exitReason = `Kalan %50 pozisyon Başa-Baş Stop seviyesinde (${currSign}${pos.stopLoss}) sıfır riskle kapatıldı. (TP1 kârı korundu)`;
+        exitReason = `Kalan %50 pozisyon Başa-Baş Stop seviyesinde (${currSign}${pos.stopLoss}) sıfır riskle kapatıldı.`;
         events.push(`🛡️ ${pos.displayTicker} Başa-baş seviyesinde kapatıldı. Kâr korundu!`);
       } else {
         exitStatus = 'CLOSED_SL';
@@ -155,7 +155,7 @@ export function updateMarketPositionsWithQuotes(
         events.push(`🛑 ${pos.displayTicker} Stop-Loss seviyesine (${currSign}${pos.stopLoss}) ulaştı ve kapatıldı. Sonuç: %${pos.unrealizedPnLPct}`);
       }
     }
-    // 4. Take-Profit 2 (Full Target Reached)
+    // 4. Take-Profit 2
     else if (currentPrice >= pos.target2) {
       shouldClose = true;
       exitStatus = 'CLOSED_TP2';
@@ -163,13 +163,13 @@ export function updateMarketPositionsWithQuotes(
       exitReason = `Ana Kâr Hedefi (${currSign}${pos.target2}) gerçekleşti!`;
       events.push(`🚀 ${pos.displayTicker} Ana Kâr Hedefine (${currSign}${pos.target2}) ulaştı! Kâr: +%${pos.unrealizedPnLPct}`);
     }
-    // 5. Max Holding Period Expiration (14 Days)
+    // 5. Max Holding Days Expiry
     else if (pos.daysHeld >= pos.maxHoldingDays) {
       shouldClose = true;
       exitStatus = 'CLOSED_EXPIRED';
       exitPrice = currentPrice;
       exitReason = `${pos.maxHoldingDays} günlük maksimum vade süresi doldu.`;
-      events.push(`⏳ ${pos.displayTicker} için ${pos.maxHoldingDays} günlük tutma süresi doldu ve piyasa fiyatından kapatıldı.`);
+      events.push(`⏳ ${pos.displayTicker} için ${pos.maxHoldingDays} günlük vade doldu ve piyasa fiyatından kapatıldı.`);
     }
 
     if (shouldClose) {

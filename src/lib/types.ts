@@ -1,7 +1,21 @@
 export type MarketType = 'US' | 'BIST';
 export type CurrencyType = 'USD' | 'TRY';
-export type StrategyType = 'EMA_PULLBACK' | 'BREAKOUT' | 'OVERSOLD_BOUNCE';
-export type SectorType = 'Technology' | 'Semiconductors' | 'Banking' | 'Aviation' | 'Energy' | 'Retail' | 'Automotive' | 'Industrial' | 'Crypto/Fintech' | 'Index';
+export type StrategyType = 'EMA_PULLBACK' | 'BREAKOUT' | 'OVERSOLD_BOUNCE' | 'MOMENTUM_TREND';
+export type SectorType = 
+  | 'Technology' 
+  | 'Semiconductors' 
+  | 'Banking' 
+  | 'Aviation' 
+  | 'Energy' 
+  | 'Retail' 
+  | 'Automotive' 
+  | 'Industrial' 
+  | 'Crypto/Fintech' 
+  | 'Defense' 
+  | 'Mining/Metals' 
+  | 'RealEstate' 
+  | 'Telekom' 
+  | 'Index';
 
 export interface Candle {
   date: string;
@@ -46,7 +60,7 @@ export interface MarketRegime {
   ticker: string;
   price: number;
   ema50: number;
-  trend: 'BULLISH' | 'BEARISH';
+  trend: 'BULLISH' | 'NEUTRAL' | 'BEARISH';
   changePercent: number;
   rsi14: number;
   allowNewBuys: boolean;

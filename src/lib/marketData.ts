@@ -11,6 +11,7 @@ export interface UniverseItem {
 }
 
 export const US_UNIVERSE: UniverseItem[] = [
+  // Big Tech & Semis
   { ticker: 'NVDA', displayTicker: 'NVDA', name: 'NVIDIA Corporation', sector: 'Semiconductors', market: 'US', currency: 'USD' },
   { ticker: 'TSLA', displayTicker: 'TSLA', name: 'Tesla, Inc.', sector: 'Automotive', market: 'US', currency: 'USD' },
   { ticker: 'AAPL', displayTicker: 'AAPL', name: 'Apple Inc.', sector: 'Technology', market: 'US', currency: 'USD' },
@@ -22,44 +23,130 @@ export const US_UNIVERSE: UniverseItem[] = [
   { ticker: 'AVGO', displayTicker: 'AVGO', name: 'Broadcom Inc.', sector: 'Semiconductors', market: 'US', currency: 'USD' },
   { ticker: 'NFLX', displayTicker: 'NFLX', name: 'Netflix, Inc.', sector: 'Technology', market: 'US', currency: 'USD' },
   { ticker: 'PLTR', displayTicker: 'PLTR', name: 'Palantir Technologies', sector: 'Technology', market: 'US', currency: 'USD' },
-  { ticker: 'COIN', displayTicker: 'COIN', name: 'Coinbase Global', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
   { ticker: 'ARM', displayTicker: 'ARM', name: 'Arm Holdings plc', sector: 'Semiconductors', market: 'US', currency: 'USD' },
   { ticker: 'SMCI', displayTicker: 'SMCI', name: 'Super Micro Computer', sector: 'Technology', market: 'US', currency: 'USD' },
-  { ticker: 'HOOD', displayTicker: 'HOOD', name: 'Robinhood Markets', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
-  { ticker: 'UBER', displayTicker: 'UBER', name: 'Uber Technologies', sector: 'Technology', market: 'US', currency: 'USD' },
-  { ticker: 'MSTR', displayTicker: 'MSTR', name: 'MicroStrategy Inc.', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
-  { ticker: 'SHOP', displayTicker: 'SHOP', name: 'Shopify Inc.', sector: 'Retail', market: 'US', currency: 'USD' },
   { ticker: 'MU', displayTicker: 'MU', name: 'Micron Technology', sector: 'Semiconductors', market: 'US', currency: 'USD' },
+  { ticker: 'QCOM', displayTicker: 'QCOM', name: 'Qualcomm Inc.', sector: 'Semiconductors', market: 'US', currency: 'USD' },
+  { ticker: 'TSM', displayTicker: 'TSM', name: 'Taiwan Semiconductor', sector: 'Semiconductors', market: 'US', currency: 'USD' },
+  { ticker: 'INTC', displayTicker: 'INTC', name: 'Intel Corporation', sector: 'Semiconductors', market: 'US', currency: 'USD' },
+  { ticker: 'MRVL', displayTicker: 'MRVL', name: 'Marvell Technology', sector: 'Semiconductors', market: 'US', currency: 'USD' },
+  { ticker: 'LRCX', displayTicker: 'LRCX', name: 'Lam Research', sector: 'Semiconductors', market: 'US', currency: 'USD' },
+  { ticker: 'KLAC', displayTicker: 'KLAC', name: 'KLA Corporation', sector: 'Semiconductors', market: 'US', currency: 'USD' },
+  { ticker: 'ON', displayTicker: 'ON', name: 'ON Semiconductor', sector: 'Semiconductors', market: 'US', currency: 'USD' },
+  { ticker: 'DELL', displayTicker: 'DELL', name: 'Dell Technologies', sector: 'Technology', market: 'US', currency: 'USD' },
+
+  // Crypto / Fintech / Momentum
+  { ticker: 'COIN', displayTicker: 'COIN', name: 'Coinbase Global', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
+  { ticker: 'MSTR', displayTicker: 'MSTR', name: 'MicroStrategy Inc.', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
+  { ticker: 'HOOD', displayTicker: 'HOOD', name: 'Robinhood Markets', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
+  { ticker: 'MARA', displayTicker: 'MARA', name: 'MARA Holdings', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
+  { ticker: 'RIOT', displayTicker: 'RIOT', name: 'Riot Platforms', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
+  { ticker: 'CLSK', displayTicker: 'CLSK', name: 'CleanSpark, Inc.', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
   { ticker: 'SOFI', displayTicker: 'SOFI', name: 'SoFi Technologies', sector: 'Banking', market: 'US', currency: 'USD' },
+  { ticker: 'PYPL', displayTicker: 'PYPL', name: 'PayPal Holdings', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
+  { ticker: 'SQ', displayTicker: 'SQ', name: 'Block, Inc.', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
+  { ticker: 'AFRM', displayTicker: 'AFRM', name: 'Affirm Holdings', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
+  { ticker: 'UPST', displayTicker: 'UPST', name: 'Upstart Holdings', sector: 'Crypto/Fintech', market: 'US', currency: 'USD' },
+
+  // High Growth / Cloud / Cyber
+  { ticker: 'APP', displayTicker: 'APP', name: 'AppLovin Corporation', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'CRWD', displayTicker: 'CRWD', name: 'CrowdStrike Holdings', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'PANW', displayTicker: 'PANW', name: 'Palo Alto Networks', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'NET', displayTicker: 'NET', name: 'Cloudflare, Inc.', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'DDOG', displayTicker: 'DDOG', name: 'Datadog, Inc.', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'SNOW', displayTicker: 'SNOW', name: 'Snowflake Inc.', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'NOW', displayTicker: 'NOW', name: 'ServiceNow, Inc.', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'CRM', displayTicker: 'CRM', name: 'Salesforce, Inc.', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'ORCL', displayTicker: 'ORCL', name: 'Oracle Corporation', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'UBER', displayTicker: 'UBER', name: 'Uber Technologies', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'SHOP', displayTicker: 'SHOP', name: 'Shopify Inc.', sector: 'Retail', market: 'US', currency: 'USD' },
+  { ticker: 'RBLX', displayTicker: 'RBLX', name: 'Roblox Corporation', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'DKNG', displayTicker: 'DKNG', name: 'DraftKings Inc.', sector: 'Technology', market: 'US', currency: 'USD' },
+  { ticker: 'CELH', displayTicker: 'CELH', name: 'Celsius Holdings', sector: 'Retail', market: 'US', currency: 'USD' },
+
+  // EV / Solar / Energy
+  { ticker: 'RIVN', displayTicker: 'RIVN', name: 'Rivian Automotive', sector: 'Automotive', market: 'US', currency: 'USD' },
+  { ticker: 'LCID', displayTicker: 'LCID', name: 'Lucid Group', sector: 'Automotive', market: 'US', currency: 'USD' },
+  { ticker: 'NIO', displayTicker: 'NIO', name: 'NIO Inc.', sector: 'Automotive', market: 'US', currency: 'USD' },
+  { ticker: 'LI', displayTicker: 'LI', name: 'Li Auto Inc.', sector: 'Automotive', market: 'US', currency: 'USD' },
+  { ticker: 'XPEV', displayTicker: 'XPEV', name: 'XPeng Inc.', sector: 'Automotive', market: 'US', currency: 'USD' },
+  { ticker: 'BABA', displayTicker: 'BABA', name: 'Alibaba Group', sector: 'Retail', market: 'US', currency: 'USD' },
+  { ticker: 'ENPH', displayTicker: 'ENPH', name: 'Enphase Energy', sector: 'Energy', market: 'US', currency: 'USD' },
+  { ticker: 'FSLR', displayTicker: 'FSLR', name: 'First Solar, Inc.', sector: 'Energy', market: 'US', currency: 'USD' },
+
+  // ETFs
   { ticker: 'QQQ', displayTicker: 'QQQ', name: 'Invesco QQQ Trust', sector: 'Index', market: 'US', currency: 'USD' },
-  { ticker: 'SPY', displayTicker: 'SPY', name: 'SPDR S&P 500 ETF', sector: 'Index', market: 'US', currency: 'USD' }
+  { ticker: 'SPY', displayTicker: 'SPY', name: 'SPDR S&P 500 ETF', sector: 'Index', market: 'US', currency: 'USD' },
+  { ticker: 'IWM', displayTicker: 'IWM', name: 'iShares Russell 2000 ETF', sector: 'Index', market: 'US', currency: 'USD' }
 ];
 
 export const BIST_UNIVERSE: UniverseItem[] = [
+  // BIST Ana Tahtalar
   { ticker: 'THYAO.IS', displayTicker: 'THYAO', name: 'Türk Hava Yolları', sector: 'Aviation', market: 'BIST', currency: 'TRY' },
-  { ticker: 'ASELS.IS', displayTicker: 'ASELS', name: 'Aselsan Elektronik', sector: 'Technology', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ASELS.IS', displayTicker: 'ASELS', name: 'Aselsan Elektronik', sector: 'Defense', market: 'BIST', currency: 'TRY' },
   { ticker: 'GARAN.IS', displayTicker: 'GARAN', name: 'Garanti BBVA', sector: 'Banking', market: 'BIST', currency: 'TRY' },
-  { ticker: 'EREGL.IS', displayTicker: 'EREGL', name: 'Ereğli Demir Çelik', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'EREGL.IS', displayTicker: 'EREGL', name: 'Ereğli Demir Çelik', sector: 'Mining/Metals', market: 'BIST', currency: 'TRY' },
   { ticker: 'TUPRS.IS', displayTicker: 'TUPRS', name: 'Tüpraş Rafinerileri', sector: 'Energy', market: 'BIST', currency: 'TRY' },
   { ticker: 'BIMAS.IS', displayTicker: 'BIMAS', name: 'BİM Birleşik Mağazalar', sector: 'Retail', market: 'BIST', currency: 'TRY' },
   { ticker: 'KCHOL.IS', displayTicker: 'KCHOL', name: 'Koç Holding', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
   { ticker: 'AKBNK.IS', displayTicker: 'AKBNK', name: 'Akbank T.A.Ş.', sector: 'Banking', market: 'BIST', currency: 'TRY' },
   { ticker: 'YKBNK.IS', displayTicker: 'YKBNK', name: 'Yapı ve Kredi Bankası', sector: 'Banking', market: 'BIST', currency: 'TRY' },
-  { ticker: 'SISE.IS', displayTicker: 'SISE', name: 'Şişecam', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ISCTR.IS', displayTicker: 'ISCTR', name: 'İş Bankası (C)', sector: 'Banking', market: 'BIST', currency: 'TRY' },
+  { ticker: 'VAKBN.IS', displayTicker: 'VAKBN', name: 'VakıfBank', sector: 'Banking', market: 'BIST', currency: 'TRY' },
+  { ticker: 'HALKB.IS', displayTicker: 'HALKB', name: 'Türkiye Halk Bankası', sector: 'Banking', market: 'BIST', currency: 'TRY' },
+  { ticker: 'TSKB.IS', displayTicker: 'TSKB', name: 'T.S.K.B.', sector: 'Banking', market: 'BIST', currency: 'TRY' },
+
+  // Havacılık, Otomotiv, Sanayi
   { ticker: 'PGSUS.IS', displayTicker: 'PGSUS', name: 'Pegasus Hava Taşımacılığı', sector: 'Aviation', market: 'BIST', currency: 'TRY' },
-  { ticker: 'ENKAI.IS', displayTicker: 'ENKAI', name: 'Enka İnşaat', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'TAVHL.IS', displayTicker: 'TAVHL', name: 'TAV Havalimanları', sector: 'Aviation', market: 'BIST', currency: 'TRY' },
   { ticker: 'FROTO.IS', displayTicker: 'FROTO', name: 'Ford Otosan', sector: 'Automotive', market: 'BIST', currency: 'TRY' },
   { ticker: 'TOASO.IS', displayTicker: 'TOASO', name: 'Tofaş Türk Otomobil', sector: 'Automotive', market: 'BIST', currency: 'TRY' },
-  { ticker: 'PETKM.IS', displayTicker: 'PETKM', name: 'Petkim Petrokimya', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'SISE.IS', displayTicker: 'SISE', name: 'Şişecam', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ENKAI.IS', displayTicker: 'ENKAI', name: 'Enka İnşaat', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
   { ticker: 'SAHOL.IS', displayTicker: 'SAHOL', name: 'Sabancı Holding', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
-  { ticker: 'EKGYO.IS', displayTicker: 'EKGYO', name: 'Emlak Konut GYO', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
-  { ticker: 'KOZAL.IS', displayTicker: 'KOZAL', name: 'Koza Altın İşletmeleri', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
-  { ticker: 'TTKOM.IS', displayTicker: 'TTKOM', name: 'Türk Telekom', sector: 'Technology', market: 'BIST', currency: 'TRY' },
-  { ticker: 'TCELL.IS', displayTicker: 'TCELL', name: 'Turkcell İletişim', sector: 'Technology', market: 'BIST', currency: 'TRY' },
-  { ticker: 'ISCTR.IS', displayTicker: 'ISCTR', name: 'İş Bankası (C)', sector: 'Banking', market: 'BIST', currency: 'TRY' },
+  { ticker: 'AGHOL.IS', displayTicker: 'AGHOL', name: 'Anadolu Grubu Holding', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'DOHOL.IS', displayTicker: 'DOHOL', name: 'Doğan Holding', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ALARK.IS', displayTicker: 'ALARK', name: 'Alarko Holding', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'KRDMD.IS', displayTicker: 'KRDMD', name: 'Kardemir (D)', sector: 'Mining/Metals', market: 'BIST', currency: 'TRY' },
+  { ticker: 'BRSAN.IS', displayTicker: 'BRSAN', name: 'Borusan Boru', sector: 'Mining/Metals', market: 'BIST', currency: 'TRY' },
+  { ticker: 'OYAKC.IS', displayTicker: 'OYAKC', name: 'Oyak Çimento', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'CIMSA.IS', displayTicker: 'CIMSA', name: 'Çimsa Çimento', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'KOZAL.IS', displayTicker: 'KOZAL', name: 'Koza Altın', sector: 'Mining/Metals', market: 'BIST', currency: 'TRY' },
+
+  // Enerji & Teknoloji & Yenilenebilir
   { ticker: 'ASTOR.IS', displayTicker: 'ASTOR', name: 'Astor Enerji', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'EUPWR.IS', displayTicker: 'EUPWR', name: 'Europower Enerji', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'KONTR.IS', displayTicker: 'KONTR', name: 'Kontrolmatik Teknoloji', sector: 'Technology', market: 'BIST', currency: 'TRY' },
+  { ticker: 'GESAN.IS', displayTicker: 'GESAN', name: 'Girişim Elektrik', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ALFAS.IS', displayTicker: 'ALFAS', name: 'Alfa Solar Enerji', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'CWENE.IS', displayTicker: 'CWENE', name: 'CW Enerji', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'GWIND.IS', displayTicker: 'GWIND', name: 'Galata Wind Enerji', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'AKSEN.IS', displayTicker: 'AKSEN', name: 'Aksa Enerji', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ENJSA.IS', displayTicker: 'ENJSA', name: 'Enerjisa Enerji', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ODAS.IS', displayTicker: 'ODAS', name: 'Odaş Elektrik', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'CANTE.IS', displayTicker: 'CANTE', name: 'Çan2 Termik', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'MIATK.IS', displayTicker: 'MIATK', name: 'Mia Teknoloji', sector: 'Technology', market: 'BIST', currency: 'TRY' },
+  { ticker: 'REEDR.IS', displayTicker: 'REEDR', name: 'Reeder Teknoloji', sector: 'Technology', market: 'BIST', currency: 'TRY' },
+
+  // Perakende, Gıda & Tüketim
   { ticker: 'MGROS.IS', displayTicker: 'MGROS', name: 'Migros Ticaret', sector: 'Retail', market: 'BIST', currency: 'TRY' },
-  { ticker: 'TAVHL.IS', displayTicker: 'TAVHL', name: 'TAV Havalimanları', sector: 'Aviation', market: 'BIST', currency: 'TRY' }
+  { ticker: 'SOKM.IS', displayTicker: 'SOKM', name: 'Şok Marketler', sector: 'Retail', market: 'BIST', currency: 'TRY' },
+  { ticker: 'CCOLA.IS', displayTicker: 'CCOLA', name: 'Coca-Cola İçecek', sector: 'Retail', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ULKER.IS', displayTicker: 'ULKER', name: 'Ülker Bisküvi', sector: 'Retail', market: 'BIST', currency: 'TRY' },
+  { ticker: 'MAVI.IS', displayTicker: 'MAVI', name: 'Mavi Giyim', sector: 'Retail', market: 'BIST', currency: 'TRY' },
+  { ticker: 'TABGD.IS', displayTicker: 'TABGD', name: 'Tab Gıda', sector: 'Retail', market: 'BIST', currency: 'TRY' },
+  { ticker: 'VESTL.IS', displayTicker: 'VESTL', name: 'Vestel Elektronik', sector: 'Technology', market: 'BIST', currency: 'TRY' },
+  { ticker: 'ARCLK.IS', displayTicker: 'ARCLK', name: 'Arçelik A.Ş.', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+
+  // Kimya, GYO, Telekom & Sigorta
+  { ticker: 'PETKM.IS', displayTicker: 'PETKM', name: 'Petkim Petrokimya', sector: 'Energy', market: 'BIST', currency: 'TRY' },
+  { ticker: 'SASA.IS', displayTicker: 'SASA', name: 'Sasa Polyester', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'HEKTS.IS', displayTicker: 'HEKTS', name: 'Hektaş Ticaret', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'GUBRF.IS', displayTicker: 'GUBRF', name: 'Gübre Fabrikaları', sector: 'Industrial', market: 'BIST', currency: 'TRY' },
+  { ticker: 'EKGYO.IS', displayTicker: 'EKGYO', name: 'Emlak Konut GYO', sector: 'RealEstate', market: 'BIST', currency: 'TRY' },
+  { ticker: 'TTKOM.IS', displayTicker: 'TTKOM', name: 'Türk Telekom', sector: 'Telekom', market: 'BIST', currency: 'TRY' },
+  { ticker: 'TCELL.IS', displayTicker: 'TCELL', name: 'Turkcell İletişim', sector: 'Telekom', market: 'BIST', currency: 'TRY' },
+  { ticker: 'TURSG.IS', displayTicker: 'TURSG', name: 'Türkiye Sigorta', sector: 'Banking', market: 'BIST', currency: 'TRY' }
 ];
 
 export const COMBINED_UNIVERSE = [...US_UNIVERSE, ...BIST_UNIVERSE];
@@ -187,7 +274,7 @@ export function calculateATR(candles: Candle[], period: number = 14): number {
 }
 
 export function calculateTechnicals(candles: Candle[]): TechnicalIndicators | null {
-  if (candles.length < 40) return null;
+  if (candles.length < 35) return null;
 
   const closes = candles.map(c => c.close);
   const volumes = candles.map(c => c.volume);
@@ -254,27 +341,30 @@ export async function fetchMarketRegime(market: MarketType): Promise<MarketRegim
       ticker: indexTicker,
       price: 0,
       ema50: 0,
-      trend: 'BULLISH',
+      trend: 'NEUTRAL',
       changePercent: 0,
       rsi14: 50,
       allowNewBuys: true,
-      reason: 'Genel piyasa verisi alınıyor.'
+      reason: 'Piyasa fırsat taraması aktif.'
     };
   }
 
-  const isBullish = tech.price >= tech.ema50 && tech.rsi14 >= 42;
+  // Softened regime: Allow trading always unless severe crash (RSI < 25)
+  const isBullish = tech.price >= tech.ema50;
+  const isSevereCrash = tech.rsi14 < 25;
+
   return {
     market,
     ticker: indexTicker,
     price: tech.price,
     ema50: tech.ema50,
-    trend: isBullish ? 'BULLISH' : 'BEARISH',
+    trend: isBullish ? 'BULLISH' : 'NEUTRAL',
     changePercent: tech.changePercent,
     rsi14: tech.rsi14,
-    allowNewBuys: isBullish,
+    allowNewBuys: !isSevereCrash, // Always allow high-potential individual stocks
     reason: isBullish
-      ? `Ana gösterge (${indexTicker}) 50 EMA üzerinde ve Boğa trendinde. Yeni alımlara izin veriliyor.`
-      : `Ana gösterge (${indexTicker}) 50 EMA altında veya zayıf. Sermaye koruması için yeni alımlar kilitlendi.`
+      ? `Genel Piyasa (${indexTicker}) pozitif trendde. Fırsatlar taranıyor.`
+      : `Piyasa konsolidasyonda. Güçlü hisselerde seçici alımlar serbest.`
   };
 }
 
@@ -286,7 +376,7 @@ export async function scanUniverse(marketFilter: 'ALL' | 'US' | 'BIST' = 'ALL'):
     : COMBINED_UNIVERSE;
 
   const results: StockScanResult[] = [];
-  const chunkSize = 8;
+  const chunkSize = 12;
 
   for (let i = 0; i < targetUniverse.length; i += chunkSize) {
     const chunk = targetUniverse.slice(i, i + chunkSize);
