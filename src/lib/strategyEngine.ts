@@ -35,16 +35,27 @@ export function evaluateSignal(
   const { price, ema9, ema20, ema50, rsi14, atr14, rvol, high20, changePercent } = tech;
   const currSign = currency === 'TRY' ? '₺' : '$';
 
-  // 🛡️ 31. MARKET DATA INTEGRITY & MANIPULATION FILTER (FAIL-SAFE)
-  const integrity = validateMarketDataIntegrity(ticker, candles, tech);
+  // 🛡️ 31. MARKET DATA INTEGRITY, PUMP & DUMP & CORPOPRATE ACTION FILTER (FAIL-SAFE)
+  const catNews = catalystInfo ? catalystInfo.news : undefined;
+  const integrity = validateMarketDataIntegrity(ticker, candles, tech, catNews);
   if (!integrity.isValid || integrity.isBlocked) {
     // Şüpheli/manipüle veri -> SİNYAL YOK (FAIL SAFE)
     return null;
   }
 
+  // ⏱️ SEANS AÇILIŞ/KAPANIŞ KORUMASI (SESSION VOLATILITY MUTE)
+  const { isSessionMuteActive } = require('./marketHours');
+  const muteCheck = isSessionMuteActive(market);
+  if (muteCheck.isMuted) {
+    return null; // Açılış/Kapanış seans volatilitesinde sahte kırılımları filtrele
+  }
+
   let catScore = catalystInfo ? catalystInfo.catalystScore : 0;
   let catSummary = catalystInfo ? catalystInfo.catalystSummary : undefined;
-  const catNews = catalystInfo ? catalystInfo.news : undefined;
+  if (integrity.isPumpRisk) {
+    catScore = -20;
+    catSummary = '⚠️ Şüpheli Hacim (Pump & Dump Riski): Habersiz agresif hacim yükselişi.';
+  }
 
   // 🛡️ AKILLI PARA / HABER TUZAĞI (FOMO & BULL TRAP) KORUMASI
   const isOverboughtTrap = rsi14 >= 72 || (ema20 > 0 && (price - ema20) / ema20 > 0.08);

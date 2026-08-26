@@ -188,6 +188,15 @@ export function updateMarketPositionsWithQuotes(
     let exitStatus: TradePosition['status'] = 'OPEN';
     let exitPrice = currentPrice;
 
+    // 🚀 PUMP YAKALAMA & KÂR KİLİTLEME KALKANI:
+    // Eğer hisse aniden %6'dan fazla kâra geçtiyse ve hedef yakınsa kârı masada bırakma
+    if (pos.unrealizedPnLPct >= 6.5 && !pos.tp1Hit) {
+      pos.tp1Hit = true;
+      pos.isBreakeven = true;
+      pos.stopLoss = Number((pos.entryPrice * 1.025).toFixed(2)); // Stop'u %2.5 kâr bölgesine çek
+      events.push(`🚀 PUMP KALKANI: ${pos.displayTicker} ani sıçrama yaptı! Kâr kilitlendi, Stop %2.5 kâra çekildi.`);
+    }
+
     if (currentPrice <= pos.stopLoss) {
       shouldClose = true;
       exitPrice = pos.stopLoss;
