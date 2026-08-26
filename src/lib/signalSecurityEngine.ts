@@ -1,7 +1,7 @@
 import { Signal } from './types';
 import { recordSecurityAuditLog } from './configSecurity';
 
-export const MAX_CONCURRENT_SIGNAL_CAP = 8; // Eşzamanlı sinyal tavanı
+export const MAX_CONCURRENT_SIGNAL_CAP = 14; // Eşzamanlı sinyal tavanı (200 hisselik evren için optimize)
 
 export interface PostIncidentRCAReport {
   incidentId: string;
@@ -97,16 +97,22 @@ export function filterAndQuarantineSignals(signals: Signal[]): {
   // 1. Kill switch check
   if (securityState.killSwitchActive) {
     recordSecurityAuditLog('SIGNAL_GENERATED', 'WARNING', `Kill Switch aktif olduğu için ${signals.length} adet sinyal üretimi engellendi.`);
+    const qSigs = signals.map(s => ({
+      ...s,
+      isQuarantined: true,
+      quarantineReason: '🛑 Acil Durum Kill Switch Koruması Devrede',
+      quarantineExpiresInSeconds: 0
+    }));
     return {
       approvedSignals: [],
-      quarantinedSignals: signals,
+      quarantinedSignals: qSigs,
       anomalyDetected: true,
       alertMessage: `🛑 Kill Switch Aktif: ${securityState.killSwitchReason || 'Tüm yeni sinyaller geçici olarak durduruldu.'}`,
       alertSeverity: 'CRITICAL'
     };
   }
 
-  // 2. ⚡ EŞZAMANLI SİNYAL BARAJI (MAX CONCURRENT CAP: 8 Sinyal/Dk)
+  // 2. ⚡ EŞZAMANLI SİNYAL BARAJI (MAX CONCURRENT CAP: 14 Sinyal/Dk)
   if (signals.length > MAX_CONCURRENT_SIGNAL_CAP) {
     securityState.totalAnomaliesDetected++;
     securityState.lastAnomalyAt = new Date().toISOString();
@@ -117,21 +123,28 @@ export function filterAndQuarantineSignals(signals: Signal[]): {
     recordSecurityAuditLog('ANOMALY_DETECTED', 'CRITICAL', rootCause, { count: signals.length });
 
     const now = new Date().toISOString();
-    for (const sig of signals) {
+    const qSigs = signals.map(sig => {
+      const qItem = {
+        ...sig,
+        isQuarantined: true,
+        quarantineReason: '⚡ Eşzamanlı Sinyal Barajı (2. Veri Kaynağı & KAP Teyidi Bekleniyor)',
+        quarantineExpiresInSeconds: 45
+      };
       securityState.quarantinedSignals.unshift({
-        signal: sig,
+        signal: qItem,
         quarantinedAt: now,
         reason: 'Eşzamanlı Sinyal Barajı Aşımı (API Glitch Koruması)',
         anomalyScore: 92,
         status: 'PENDING_VALIDATION'
       });
-    }
+      return qItem;
+    });
 
     return {
       approvedSignals: [],
-      quarantinedSignals: signals,
+      quarantinedSignals: qSigs,
       anomalyDetected: true,
-      alertMessage: `🚨 EŞZAMANLI SİNYAL BARAJI: Aynı anda ${signals.length} sinyal tespit edildi. Veri güvenliği için karantinaya alındı.`,
+      alertMessage: `🚨 EŞZAMANLI SİNYAL BARAJI: Aynı anda ${signals.length} sinyal tespit edildi. İkinci veri kaynağı teyidi için karantinaya alındı.`,
       alertSeverity: 'CRITICAL'
     };
   }
@@ -139,7 +152,12 @@ export function filterAndQuarantineSignals(signals: Signal[]): {
   // 3. 🛡️ KADEMELİ KARANTİNA ÇIKIŞI (PHASED RECOVERY)
   if (securityState.recoveryPhase === 'A_PLUS_ONLY') {
     const eliteSignals = signals.filter(s => s.grade === 'A+');
-    const nonElite = signals.filter(s => s.grade !== 'A+');
+    const nonElite = signals.filter(s => s.grade !== 'A+').map(s => ({
+      ...s,
+      isQuarantined: true,
+      quarantineReason: '🛡️ Kademeli Kurtarma Modu (Önce A+ Sinyaller Onaylanıyor)',
+      quarantineExpiresInSeconds: 30
+    }));
 
     if (nonElite.length > 0) {
       recordSecurityAuditLog('QUARANTINE_ACTION', 'INFO', `Kademeli kurtarma fazında ${nonElite.length} adet standart sinyal bekletildi.`);

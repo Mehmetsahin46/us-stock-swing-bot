@@ -88,8 +88,8 @@ export function evaluateSignal(
       const potentialGainPct = Number((((target2 - price) / price) * 100).toFixed(2));
       const maxRiskPct = Number((((price - stopLoss) / price) * 100).toFixed(2));
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
-      const technicalScore = Math.min(94, Math.round(70 + (rvol > 1 ? 12 : 6) + (rsi14 > 45 ? 10 : 5)));
-      const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const technicalScore = Math.min(94, Math.round(62 + Math.min(18, (riskReward - 1.5) * 8) + (rvol > 1.1 ? 8 : 3) + (rsi14 >= 42 && rsi14 <= 58 ? 6 : 2)));
+      const finalScore = Math.min(96, Math.max(50, Math.round(technicalScore + (catScore > 0 ? Math.min(12, catScore * 0.6) : catScore))));
       const grade = calculateSignalGrade(finalScore, catScore, rvol);
       const expectedValuePct = calculateExpectedValue(75, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
@@ -138,8 +138,8 @@ export function evaluateSignal(
       const potentialGainPct = Number((((target2 - price) / price) * 100).toFixed(2));
       const maxRiskPct = Number((((price - stopLoss) / price) * 100).toFixed(2));
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
-      const technicalScore = Math.min(96, Math.round(75 + (rvol > 1.2 ? 14 : 8) + (changePercent > 0.5 ? 6 : 2)));
-      const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const technicalScore = Math.min(96, Math.round(68 + Math.min(16, (rvol - 1.0) * 12) + (changePercent > 1.0 ? 8 : 4)));
+      const finalScore = Math.min(98, Math.max(50, Math.round(technicalScore + (catScore > 0 ? Math.min(12, catScore * 0.6) : catScore))));
       const grade = calculateSignalGrade(finalScore, catScore, rvol);
       const expectedValuePct = calculateExpectedValue(72, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
@@ -188,8 +188,8 @@ export function evaluateSignal(
       const potentialGainPct = Number((((target2 - price) / price) * 100).toFixed(2));
       const maxRiskPct = Number((((price - stopLoss) / price) * 100).toFixed(2));
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
-      const technicalScore = Math.min(92, Math.round(68 + (changePercent > 1.5 ? 12 : 6) + (rsi14 > 58 ? 8 : 4)));
-      const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const technicalScore = Math.min(92, Math.round(60 + (rsi14 > 55 && rsi14 < 68 ? 12 : 5) + (changePercent > 0.8 ? 8 : 3)));
+      const finalScore = Math.min(94, Math.max(48, Math.round(technicalScore + (catScore > 0 ? Math.min(10, catScore * 0.5) : catScore))));
       const grade = calculateSignalGrade(finalScore, catScore, rvol);
       const expectedValuePct = calculateExpectedValue(70, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
@@ -238,8 +238,8 @@ export function evaluateSignal(
       const potentialGainPct = Number((((target2 - price) / price) * 100).toFixed(2));
       const maxRiskPct = Number((((price - stopLoss) / price) * 100).toFixed(2));
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
-      const technicalScore = Math.min(90, Math.round(65 + (40 - rsi14) * 1.5));
-      const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const technicalScore = Math.min(90, Math.round(58 + (38 - rsi14) * 1.8 + (changePercent > 0 ? 6 : 0)));
+      const finalScore = Math.min(92, Math.max(45, Math.round(technicalScore + (catScore > 0 ? Math.min(10, catScore * 0.5) : catScore))));
       const grade = calculateSignalGrade(finalScore, catScore, rvol);
       const expectedValuePct = calculateExpectedValue(68, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);

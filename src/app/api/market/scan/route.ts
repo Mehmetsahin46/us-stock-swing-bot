@@ -19,13 +19,18 @@ export async function GET(request: NextRequest) {
 
     // If anomaly or quarantine, strip unapproved signals from public results
     const approvedTickerSet = new Set(approvedSignals.map(s => s.ticker));
+    const quarantinedMap = new Map(quarantinedSignals.map(s => [s.ticker, s]));
+
     const sanitizedResults = results.map(r => {
       if (r.signal && !approvedTickerSet.has(r.signal.ticker)) {
+        const qSig = quarantinedMap.get(r.signal.ticker);
         return {
           ...r,
           signal: {
             ...r.signal,
             isQuarantined: true,
+            quarantineReason: qSig?.quarantineReason || '2. Veri Kaynağı & KAP Teyidi Bekleniyor',
+            quarantineExpiresInSeconds: qSig?.quarantineExpiresInSeconds || 45,
             title: `🟡 SIGNAL UNDER VALIDATION: ${r.signal.displayTicker} (Karantinada)`
           }
         };

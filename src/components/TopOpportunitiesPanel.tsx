@@ -107,21 +107,35 @@ export const TopOpportunitiesPanel: React.FC<TopOpportunitiesPanelProps> = ({ re
                     </div>
 
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold font-mono shadow-sm ${
-                        signal.grade === 'A+'
-                          ? 'bg-gradient-to-r from-amber-400/30 to-yellow-500/30 text-amber-300 border border-amber-400/50'
-                          : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                      }`}>
-                        {signal.grade === 'A+' ? '🥇 A+ ELİT' : '🥈 A SINIFI'}
-                      </span>
+                      {signal.isQuarantined ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-extrabold font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse" title={signal.quarantineReason || '2. Veri Kaynağı & KAP Teyidi Bekleniyor'}>
+                          🟡 KARANTİNADA ({signal.quarantineExpiresInSeconds || 45}s)
+                        </span>
+                      ) : (
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold font-mono shadow-sm ${
+                          signal.grade === 'A+'
+                            ? 'bg-gradient-to-r from-amber-400/30 to-yellow-500/30 text-amber-300 border border-amber-400/50'
+                            : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        }`}>
+                          {signal.grade === 'A+' ? '🥇 A+ ELİT' : '🥈 A SINIFI'}
+                        </span>
+                      )}
                       <span className="px-2 py-0.5 rounded text-[10px] font-extrabold font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
                         {signal.score} Skor
                       </span>
                       <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" title="Veri Bütünlüğü & Güvenilirliği">
-                        🔒 %{signal.dataConfidenceScore || 99} Veri
+                        🔒 %{signal.dataConfidenceScore || 98} Veri
                       </span>
                     </div>
                   </div>
+
+                  {/* Quarantine Reason Notice if quarantined */}
+                  {signal.isQuarantined && signal.quarantineReason && (
+                    <div className="p-2 mb-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-300 flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                      <span>{signal.quarantineReason}</span>
+                    </div>
+                  )}
 
                   {/* Strategy Title */}
                   <h3 className="text-xs font-bold text-white leading-snug group-hover:text-indigo-300 transition-colors">

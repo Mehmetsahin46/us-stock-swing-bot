@@ -115,6 +115,8 @@ export interface Signal {
   dataConfidenceStatus?: 'HIGH' | 'MEDIUM' | 'LOW';
   integrityHash?: string; // SHA-256 Signal Snapshot Hash
   isQuarantined?: boolean; // Signal Under Validation
+  quarantineReason?: string; // Neden karantinaya alındı?
+  quarantineExpiresInSeconds?: number; // Otomatik mezuniyet için kalan süre (sn)
   estimatedDays?: number;
   estimatedTimeframe?: string;
   timestamp: string;

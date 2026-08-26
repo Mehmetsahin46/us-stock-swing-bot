@@ -25,7 +25,10 @@ export function validateMarketDataIntegrity(
   news?: StockNewsItem[],
   isBacktest: boolean = false
 ): DataIntegrityResult {
-  let confidence = 100;
+  // 🔬 DİNAMİK VERİ GÜVEN PUANI (Mum derinliği ve anlık volatilite varyansına göre dinamik taban)
+  const candleDepthBonus = candles.length >= 60 ? 0 : candles.length >= 40 ? -3 : -6;
+  const spreadNoisePenalty = Math.abs(tech.changePercent) > 6.5 ? -2 : 0;
+  let confidence = Math.min(99, 98 + candleDepthBonus + spreadNoisePenalty);
   let isBlocked = false;
   let isPumpRisk = false;
   let isCorporateAction = false;
