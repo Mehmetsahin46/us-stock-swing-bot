@@ -164,6 +164,7 @@ export interface TradePosition {
   maxHoldingDays: number;
   estimatedDays?: number;
   estimatedTimeframe?: string;
+  regimeAtEntry?: 'BULL' | 'CHOP' | 'BEAR';
 }
 
 export interface MarketPortfolio {
@@ -240,9 +241,9 @@ export interface BacktestResult {
     payoffRatio: number; // Ortalama Kazanç / Ortalama Kayıp Oranı (Asimetrik Getiri)
   };
   regimePerformance: {
-    bull: { winRate: number; avgReturnPct: number; description: string };
-    sideways: { winRate: number; avgReturnPct: number; description: string };
-    bear: { winRate: number; avgReturnPct: number; description: string };
+    bull: { tradeCount: number; winRate: number; avgReturnPct: number; description: string };
+    sideways: { tradeCount: number; winRate: number; avgReturnPct: number; description: string };
+    bear: { tradeCount: number; winRate: number; avgReturnPct: number; description: string };
   };
   walkForward: {
     inSampleWinRate: number;

@@ -276,10 +276,15 @@ export const BacktestView: React.FC = () => {
           {/* 🐂 🦀 🐻 PİYASA REJİMLERİNE GÖRE PERFORMANS KIRILIMI */}
           {result.regimePerformance && (
             <div className="p-4 rounded-2xl bg-card border border-border space-y-3">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Scale className="w-4 h-4 text-indigo-400" />
-                <span>Piyasa Rejimlerine Göre Performans Kırılımı (Market Regime Breakdown)</span>
-              </h3>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Scale className="w-4 h-4 text-indigo-400" />
+                  <span>Piyasa Rejimlerine Göre Performans Kırılımı (Market Regime Breakdown)</span>
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 font-mono">
+                  🛡️ Sıfır Look-Ahead Bias (İşlem anındaki EMA50/20 rejimine göre)
+                </span>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
@@ -289,9 +294,10 @@ export const BacktestView: React.FC = () => {
                     </span>
                     <span className="font-mono font-bold text-emerald-400">%{result.regimePerformance.bull.winRate} Win</span>
                   </div>
-                  <span className="text-[11px] font-mono text-emerald-300 font-bold block">
-                    Ort. İşlem Getirisi: +%{result.regimePerformance.bull.avgReturnPct}
-                  </span>
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-emerald-300 font-bold">Ort. Net: +%{result.regimePerformance.bull.avgReturnPct}</span>
+                    <span className="text-slate-400 font-bold">{result.regimePerformance.bull.tradeCount} İşlem</span>
+                  </div>
                   <p className="text-[10px] text-slate-400 leading-tight">
                     {result.regimePerformance.bull.description}
                   </p>
@@ -304,9 +310,10 @@ export const BacktestView: React.FC = () => {
                     </span>
                     <span className="font-mono font-bold text-slate-300">%{result.regimePerformance.sideways.winRate} Win</span>
                   </div>
-                  <span className="text-[11px] font-mono text-indigo-300 font-bold block">
-                    Ort. İşlem Getirisi: +%{result.regimePerformance.sideways.avgReturnPct}
-                  </span>
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-indigo-300 font-bold">Ort. Net: +%{result.regimePerformance.sideways.avgReturnPct}</span>
+                    <span className="text-slate-400 font-bold">{result.regimePerformance.sideways.tradeCount} İşlem</span>
+                  </div>
                   <p className="text-[10px] text-slate-400 leading-tight">
                     {result.regimePerformance.sideways.description}
                   </p>
@@ -319,9 +326,10 @@ export const BacktestView: React.FC = () => {
                     </span>
                     <span className="font-mono font-bold text-danger-400">%{result.regimePerformance.bear.winRate} Win</span>
                   </div>
-                  <span className="text-[11px] font-mono text-danger-400 font-bold block">
-                    Ort. İşlem Getirisi: {result.regimePerformance.bear.avgReturnPct}%
-                  </span>
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-danger-400 font-bold">Ort. Net: {result.regimePerformance.bear.avgReturnPct}%</span>
+                    <span className="text-slate-400 font-bold">{result.regimePerformance.bear.tradeCount} İşlem</span>
+                  </div>
                   <p className="text-[10px] text-slate-400 leading-tight">
                     {result.regimePerformance.bear.description}
                   </p>
