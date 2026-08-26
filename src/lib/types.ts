@@ -216,6 +216,9 @@ export interface BacktestResult {
   summary: {
     period: string;
     market: string;
+    benchmarkName: string; // e.g. BIST 100 or S&P 500
+    benchmarkReturnPct: number; // Endeks getirisi %
+    alphaPct: number; // Endeks üstü getiri % (Strateji - Endeks)
     initialCapital: number;
     finalCapital: number;
     totalReturnPct: number;
@@ -225,18 +228,21 @@ export interface BacktestResult {
     losingTrades: number;
     profitFactor: number;
     maxDrawdownPct: number;
+    indexMaxDrawdownPct: number; // Endeksin yaşadığı max drawdown %
     avgTradeDays: number;
     avgGainPct: number;
     avgLossPct: number;
+    payoffRatio: number; // Ortalama Kazanç / Ortalama Kayıp Oranı (Asimetrik Getiri)
   };
   walkForward: {
     inSampleWinRate: number;
     inSampleProfitFactor: number;
     outSampleWinRate: number;
     outSampleProfitFactor: number;
-    wfePct: number; // Walk Forward Efficiency %
-    status: 'MÜKEMMEL (ROBUST)' | 'GÜÇLÜ' | 'AŞIRI UYARLAMA RİSKİ';
+    wfePct: number; // Walk Forward Efficiency % (Normalized 0-100%)
+    status: 'YÜKSEK TUTARLILIK (ROBUST)' | 'DENGELİ (GÜÇLÜ)' | 'AŞIRI UYARLAMA RİSKİ';
     validationVerdict: string;
+    asymmetricEdgeNote: string;
   };
   equityCurve: { date: string; equity: number }[];
   trades: TradePosition[];

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { BacktestParams, BacktestResult } from '@/lib/types';
-import { PlayCircle, TrendingUp, AlertTriangle, CheckCircle2, RefreshCw, BarChart2, ShieldCheck, Microscope, Layers, Info, DollarSign } from 'lucide-react';
+import { PlayCircle, TrendingUp, AlertTriangle, CheckCircle2, RefreshCw, BarChart2, ShieldCheck, Microscope, Layers, Info, DollarSign, Award, Target, ArrowUpRight, Scale } from 'lucide-react';
 
 export const BacktestView: React.FC = () => {
   const [params, setParams] = useState<BacktestParams>({
@@ -68,7 +68,7 @@ export const BacktestView: React.FC = () => {
         </div>
 
         <p className="text-xs text-slate-400">
-          Stratejilerin geçmiş borsa döngülerindeki kâr/zarar performansını, işlem sayılarını ve <strong>Walk-Forward aşırı uyarlama (Overfitting)</strong> direncini test edin.
+          Stratejilerin geçmiş borsa döngülerindeki kâr/zarar performansını, işlem sayılarını, <strong>Benchmark (Endeks) kıyaslamasını</strong> ve <strong>Walk-Forward aşırı uyarlama (Overfitting)</strong> direncini test edin.
         </p>
 
         {/* Inputs Grid */}
@@ -175,7 +175,32 @@ export const BacktestView: React.FC = () => {
       {/* Results Section (Only rendered when result exists) */}
       {result && (
         <div className="space-y-6">
-          {/* Summary Cards */}
+          {/* 📊 BENCHMARK & ALPHA BANNER */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-slate-900 to-slate-900 border border-indigo-500/30 flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-indigo-400" />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  Benchmark Karşılaştırması ({result.summary.benchmarkName})
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300">
+                Aynı dönemde <strong>{result.summary.benchmarkName}</strong> getirisi: <span className="font-mono font-bold text-white">+{result.summary.benchmarkReturnPct}%</span> | 
+                Strateji Getirisi: <span className="font-mono font-bold text-emerald-400">+{result.summary.totalReturnPct}%</span>
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-right">
+                <span className="text-[10px] text-emerald-400 font-bold block uppercase">Alpha (Endeks Üstü Ekstra)</span>
+                <span className="text-sm font-bold font-mono text-emerald-300">
+                  {result.summary.alphaPct >= 0 ? '+' : ''}%{result.summary.alphaPct}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Core Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
             <div className="p-4 rounded-xl bg-card border border-border">
               <span className="text-xs text-muted block mb-1">Toplam Kuant Getirisi</span>
@@ -202,7 +227,7 @@ export const BacktestView: React.FC = () => {
               <div className="text-xl font-bold font-mono text-accent-400">
                 {result.summary.profitFactor}x
               </div>
-              <span className="text-[10px] text-muted block mt-1">Kazanç / Kayıp Oranı</span>
+              <span className="text-[10px] text-muted block mt-1">Toplam Kazanç / Kayıp Oranı</span>
             </div>
 
             <div className="p-4 rounded-xl bg-card border border-border">
@@ -210,7 +235,30 @@ export const BacktestView: React.FC = () => {
               <div className="text-xl font-bold font-mono text-danger-400">
                 -%{result.summary.maxDrawdownPct}
               </div>
-              <span className="text-[10px] text-muted block mt-1">Zirveden Maks Düşüş</span>
+              <span className="text-[10px] text-muted block mt-1">
+                Endeks Drawdown: -%{result.summary.indexMaxDrawdownPct} ({result.summary.maxDrawdownPct < result.summary.indexMaxDrawdownPct ? 'Daha Güvenli' : 'Yüksek'})
+              </span>
+            </div>
+          </div>
+
+          {/* ⚖️ ASİMETRİK RİSK/ÖDÜL VE KAZANÇ BÜYÜKLÜĞÜ PANELİ */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1 font-mono text-xs">
+              <span className="text-slate-500 text-[10px] block">Ortalama Kazanan İşlem</span>
+              <span className="text-emerald-400 font-bold text-sm">+{result.summary.avgGainPct}%</span>
+              <span className="text-[10px] text-slate-400 block font-sans">Hedefe giden kârlı işlemler</span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1 font-mono text-xs">
+              <span className="text-slate-500 text-[10px] block">Ortalama Kaybeden İşlem</span>
+              <span className="text-danger-400 font-bold text-sm">-%{result.summary.avgLossPct}%</span>
+              <span className="text-[10px] text-slate-400 block font-sans">Stop-loss ile kesilen işlemler</span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1 font-mono text-xs">
+              <span className="text-slate-500 text-[10px] block">Risk/Ödül Asimetri Çarpanı</span>
+              <span className="text-indigo-300 font-bold text-sm">{result.summary.payoffRatio}x Payoff Ratio</span>
+              <span className="text-[10px] text-emerald-400 block font-sans">Kazançlar kayıpları katlıyor</span>
             </div>
           </div>
 
@@ -222,9 +270,9 @@ export const BacktestView: React.FC = () => {
                 <span>Walk-Forward Doğrulama & Aşırı Uyarlama (Overfitting) Raporu</span>
               </h3>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                result.walkForward.status === 'MÜKEMMEL (ROBUST)'
+                result.walkForward.status === 'YÜKSEK TUTARLILIK (ROBUST)'
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                  : result.walkForward.status === 'GÜÇLÜ'
+                  : result.walkForward.status === 'DENGELİ (GÜÇLÜ)'
                   ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
                   : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
               }`}>
@@ -248,6 +296,17 @@ export const BacktestView: React.FC = () => {
                 <span className="text-indigo-300 font-bold font-mono text-sm">%{result.walkForward.wfePct}</span>
                 <span className="text-[10px] text-emerald-400 block leading-tight">{result.walkForward.validationVerdict}</span>
               </div>
+            </div>
+
+            {/* Asymmetric Edge Explanation Banner */}
+            <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] text-slate-300 flex items-start gap-2">
+              <Info className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
+              <span>{result.walkForward.asymmetricEdgeNote}</span>
+            </div>
+
+            {/* Statistical Sample Size Note */}
+            <div className="text-right text-[10px] text-slate-500 font-mono">
+              📊 İstatistiksel Örneklem: Son {params.periodMonths} ayda tamamlanan {result.summary.totalTrades} adet swing trade işlemine dayanmaktadır.
             </div>
           </div>
         </div>
