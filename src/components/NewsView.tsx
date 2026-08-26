@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { StockScanResult, MarketType, Signal, StockNewsItem } from '@/lib/types';
-import { Newspaper, Sparkles, TrendingUp, AlertTriangle, ExternalLink, Filter, Building2, Zap } from 'lucide-react';
+import { Newspaper, Sparkles, TrendingUp, AlertTriangle, ExternalLink, Filter, Building2, Zap, Clock, ShieldCheck } from 'lucide-react';
 
 interface NewsViewProps {
   results: StockScanResult[];
@@ -48,22 +48,40 @@ export const NewsView: React.FC<NewsViewProps> = ({ results, onOpenTrade }) => {
     }
   };
 
+  const formatNewsDate = (dateStr?: string) => {
+    if (!dateStr) return 'Bugün';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return new Intl.DateTimeFormat('tr-TR', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(d);
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-900/60 border border-slate-800 rounded-2xl">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-md">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Newspaper className="w-5 h-5 text-indigo-400" />
               <span>Piyasa Haberleri & Bilanço Katalizörleri</span>
             </h2>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              Quantamental AI Engine
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-indigo-400" />
+              FOMO / Tepe Tuzağı Korumalı
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Teknik göstergeler (RSI/EMA) ile şirket bilançoları, yeni sözleşmeler ve KAP haberleri harmanlanarak en güçlü alım fırsatları filtrelenir.
+          <p className="text-xs text-slate-400 mt-1">
+            Haberler tek başına alım yaptırmaz. Şişmiş (RSI &gt; 72) hisselerde iyi haber gelse bile tepe mal kilitleme riskine karşı alım engellenir.
           </p>
         </div>
 
@@ -77,7 +95,7 @@ export const NewsView: React.FC<NewsViewProps> = ({ results, onOpenTrade }) => {
                 selectedMarket === 'ALL' ? 'bg-primary-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
-              Tümü
+              Tümü ({allNews.length})
             </button>
             <button
               onClick={() => setSelectedMarket('BIST')}
@@ -85,7 +103,7 @@ export const NewsView: React.FC<NewsViewProps> = ({ results, onOpenTrade }) => {
                 selectedMarket === 'BIST' ? 'bg-red-500/30 text-white border border-red-500/50' : 'text-slate-400 hover:text-white'
               }`}
             >
-              🇹🇷 BIST
+              🇹🇷 BIST ({allNews.filter(n => n.resultRef.market === 'BIST').length})
             </button>
             <button
               onClick={() => setSelectedMarket('US')}
@@ -93,7 +111,7 @@ export const NewsView: React.FC<NewsViewProps> = ({ results, onOpenTrade }) => {
                 selectedMarket === 'US' ? 'bg-blue-500/30 text-white border border-blue-500/50' : 'text-slate-400 hover:text-white'
               }`}
             >
-              🇺🇸 ABD
+              🇺🇸 ABD ({allNews.filter(n => n.resultRef.market === 'US').length})
             </button>
           </div>
 
@@ -189,27 +207,30 @@ export const NewsView: React.FC<NewsViewProps> = ({ results, onOpenTrade }) => {
                     {item.title}
                   </h3>
 
-                  <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">
+                  <p className="text-[11px] text-slate-400 mt-1.5 line-clamp-2 leading-relaxed">
                     {item.summary}
                   </p>
                 </div>
 
                 {/* Bottom Action & Signal Link */}
-                <div className="pt-2.5 border-t border-slate-800 flex items-center justify-between text-[10px]">
-                  <span className="text-slate-500">
-                    Kaynak: <strong className="text-slate-400">{item.source}</strong>
-                  </span>
+                <div className="pt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px]">
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    <span className="text-[10px] font-mono">{formatNewsDate(item.publishedAt)}</span>
+                    <span className="text-slate-600">•</span>
+                    <span className="text-[10px] text-slate-500 font-medium">{item.source}</span>
+                  </div>
 
                   {hasSignal && sig ? (
                     <button
                       onClick={() => onOpenTrade(sig)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white font-bold border border-emerald-500/40 transition-all cursor-pointer shadow-sm"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white font-bold border border-emerald-500/40 transition-all cursor-pointer shadow-sm text-xs"
                     >
                       <Zap className="w-3.5 h-3.5" />
                       <span>Alım Sinyali Aç (Skor: {sig.score})</span>
                     </button>
                   ) : (
-                    <span className="text-slate-500 italic">Teknik Onay Bekleniyor</span>
+                    <span className="text-[10px] text-slate-500 italic">Teknik Destek Onayı Bekleniyor</span>
                   )}
                 </div>
               </div>

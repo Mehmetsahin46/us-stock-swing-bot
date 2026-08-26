@@ -12,9 +12,28 @@ export function evaluateSignal(
 ): Signal | null {
   const { price, ema9, ema20, ema50, rsi14, atr14, rvol, high20, changePercent } = tech;
   const currSign = currency === 'TRY' ? '₺' : '$';
-  const catScore = catalystInfo ? catalystInfo.catalystScore : 0;
-  const catSummary = catalystInfo ? catalystInfo.catalystSummary : undefined;
+
+  let catScore = catalystInfo ? catalystInfo.catalystScore : 0;
+  let catSummary = catalystInfo ? catalystInfo.catalystSummary : undefined;
   const catNews = catalystInfo ? catalystInfo.news : undefined;
+
+  // =========================================================================
+  // 🛡️ AKILLI PARA / HABER TUZAĞI (FOMO & BULL TRAP) KORUMA KURALLARI
+  // =========================================================================
+  // 1. "Habere Atlama / Tepe Mal Kilitleme" Koruması:
+  // Eğer hisse zaten aşırı şişmişse (RSI > 70) veya fiyatta aşırı uzama varsa,
+  // iyi haber gelse bile akıllı para satış için kullanır! Skoru düşür & uyar.
+  const isOverboughtTrap = rsi14 >= 72 || (ema20 > 0 && (price - ema20) / ema20 > 0.08);
+  if (isOverboughtTrap && catScore > 0) {
+    catScore = -15; // Tepe tuzağı riski nedeniyle pozitif haber çarpanını sıfırla/kır
+    catSummary = '⚠️ Tepe Mal Kilitleme Riski: Hisse aşırı şişkin bölgede, iyi habere rağmen düzeltme bekleniyor.';
+  }
+
+  // 2. "Düşen Bıçak / Kötü Bilanço" Koruması:
+  // Eğer hisse 50 EMA altında ve negatif haber varsa alım kesinlikle iptal edilir.
+  if (price < ema50 && catScore < 0) {
+    return null; // Ayı trendindeki kötü haberli hisseyi doğrudan ele
+  }
 
   // 1. STRATEGY: EMA 20 Pullback (Trend Desteği)
   const isUptrend = price >= ema50 * 0.98 || ema20 > ema50 * 0.98;
@@ -48,7 +67,7 @@ export function evaluateSignal(
         catalystScore: catScore,
         catalystSummary: catSummary,
         activeCatalysts: catNews,
-        reason: `Hisse yükselen trendde 20 EMA (${currSign}${ema20}) desteğini test etti ve RSI (${rsi14}) dengeli bölgede.${catSummary ? ` [Haber Etkisi: ${catSummary}]` : ''}`,
+        reason: `Hisse yükselen trendde 20 EMA (${currSign}${ema20}) desteğini test etti ve RSI (${rsi14}) dengeli bölgede.${catSummary ? ` [Katalizör: ${catSummary}]` : ''}`,
         suggestedEntry: price,
         stopLoss,
         target1,
@@ -62,8 +81,9 @@ export function evaluateSignal(
   }
 
   // 2. STRATEGY: High-Volume Breakout (Zirve / Direnç Kırılımı)
-  const isBreakout = price >= high20 * 0.985 && rvol >= 0.95 && price >= ema20;
-  const isMomentumRSI = rsi14 >= 50 && rsi14 <= 82;
+  // Tepe tuzağına düşmemek için RVOL teyidi şart
+  const isBreakout = price >= high20 * 0.985 && rvol >= 1.05 && price >= ema20;
+  const isMomentumRSI = rsi14 >= 50 && rsi14 <= 74; // RSI 74 üzeri FOMO kırılımlarına girilmez
 
   if (isBreakout && isMomentumRSI) {
     const stopLoss = Number((price - 1.6 * atr14).toFixed(2));
@@ -92,7 +112,7 @@ export function evaluateSignal(
         catalystScore: catScore,
         catalystSummary: catSummary,
         activeCatalysts: catNews,
-        reason: `Hisse son 20 günün zirvesini (${currSign}${high20}) hacimli kırıyor (RVOL ${rvol}x).${catSummary ? ` [Haber Etkisi: ${catSummary}]` : ''}`,
+        reason: `Hisse 20 günlük direnci kurumsal hacimle (${rvol}x RVOL) kırıyor.${catSummary ? ` [Katalizör: ${catSummary}]` : ''}`,
         suggestedEntry: price,
         stopLoss,
         target1,
@@ -106,7 +126,7 @@ export function evaluateSignal(
   }
 
   // 3. STRATEGY: Momentum Trend (Güçlü Yükseliş Kanalı)
-  const isStrongTrend = price > ema9 && ema9 > ema20 && rsi14 >= 52 && changePercent >= 0.3;
+  const isStrongTrend = price > ema9 && ema9 > ema20 && rsi14 >= 52 && rsi14 <= 72 && changePercent >= 0.3;
   if (isStrongTrend) {
     const stopLoss = Number((Math.min(ema20, price - 1.3 * atr14)).toFixed(2));
     const risk = price - stopLoss;
@@ -134,7 +154,7 @@ export function evaluateSignal(
         catalystScore: catScore,
         catalystSummary: catSummary,
         activeCatalysts: catNews,
-        reason: `Hisse 9 ve 20 günlük ortalamaların üzerinde güçlü ivmeye sahip (RSI ${rsi14}).${catSummary ? ` [Haber Etkisi: ${catSummary}]` : ''}`,
+        reason: `Hisse 9 ve 20 günlük ortalamaların üzerinde dengeli yukarı ivmeye sahip (RSI ${rsi14}).${catSummary ? ` [Katalizör: ${catSummary}]` : ''}`,
         suggestedEntry: price,
         stopLoss,
         target1,
@@ -148,6 +168,7 @@ export function evaluateSignal(
   }
 
   // 4. STRATEGY: Oversold Mean Reversion (Dip Tepkisi)
+  // Dipte iyi haber gelirse muazzam bir dönüş fırsatıdır!
   const isOversold = rsi14 <= 38 && (changePercent >= -0.5 || (candles.length > 2 && price >= candles[candles.length - 2].low * 0.99));
 
   if (isOversold) {
@@ -177,7 +198,7 @@ export function evaluateSignal(
         catalystScore: catScore,
         catalystSummary: catSummary,
         activeCatalysts: catNews,
-        reason: `RSI (${rsi14}) aşırı satım bölgesinde ve dip seviyelerden toparlanma emareleri gösteriyor.${catSummary ? ` [Haber Etkisi: ${catSummary}]` : ''}`,
+        reason: `RSI (${rsi14}) aşırı satım bölgesinde ve dip seviyelerden toparlanma emareleri gösteriyor.${catSummary ? ` [Katalizör: ${catSummary}]` : ''}`,
         suggestedEntry: price,
         stopLoss,
         target1,
