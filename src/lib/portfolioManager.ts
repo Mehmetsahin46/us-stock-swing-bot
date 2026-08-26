@@ -105,7 +105,9 @@ export function openPositionForMarket(
     realizedPnLPct: 0,
     status: 'OPEN',
     daysHeld: 0,
-    maxHoldingDays: portfolio.maxHoldingDays
+    maxHoldingDays: portfolio.maxHoldingDays,
+    estimatedDays: signal.estimatedDays,
+    estimatedTimeframe: signal.estimatedTimeframe
   };
 
   portfolio.positions.unshift(newPosition);

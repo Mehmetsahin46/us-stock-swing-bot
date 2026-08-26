@@ -159,16 +159,23 @@ export const ScannerView: React.FC<ScannerViewProps> = ({
                   <td className="py-3 px-4">
                     {signal ? (
                       <div>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${
-                          signal.strategy === 'BREAKOUT'
-                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                            : signal.strategy === 'EMA_PULLBACK'
-                            ? 'bg-primary-500/10 border-primary-500/30 text-primary-400'
-                            : 'bg-accent-500/10 border-accent-500/30 text-accent-400'
-                        }`}>
-                          <TrendingUp className="w-3 h-3" />
-                          {signal.strategyName}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${
+                            signal.strategy === 'BREAKOUT'
+                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                              : signal.strategy === 'EMA_PULLBACK'
+                              ? 'bg-primary-500/10 border-primary-500/30 text-primary-400'
+                              : 'bg-accent-500/10 border-accent-500/30 text-accent-400'
+                          }`}>
+                            <TrendingUp className="w-3 h-3" />
+                            {signal.strategyName}
+                          </span>
+                          {signal.estimatedTimeframe && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                              ⏳ {signal.estimatedTimeframe}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[10px] text-muted mt-0.5">
                           Stop: {currSign}{signal.stopLoss} | Hedef: {currSign}{signal.target2}
                         </div>

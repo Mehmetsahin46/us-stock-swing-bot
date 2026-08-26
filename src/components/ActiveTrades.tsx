@@ -129,16 +129,19 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
                 </td>
 
                 <td className="py-3.5 px-4">
-                  <div className="flex items-center gap-1 text-white font-medium">
+                  <div className="flex items-center gap-1 text-white font-medium text-xs">
                     <Clock className="w-3.5 h-3.5 text-accent-400" />
-                    <span>{pos.daysHeld} / {pos.maxHoldingDays} Gün</span>
+                    <span>{pos.daysHeld} Gün</span>
                   </div>
-                  <div className="w-24 h-1 rounded-full bg-slate-800 mt-1.5 overflow-hidden">
-                    <div 
-                      className="h-full bg-accent-500 rounded-full" 
-                      style={{ width: `${holdingProgress}%` }} 
-                    />
-                  </div>
+                  {pos.estimatedTimeframe ? (
+                    <div className="text-[10px] text-indigo-400 font-semibold mt-0.5" title="Beklenen Hedef Süresi">
+                      ⏳ {pos.estimatedTimeframe}
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      Maks: {pos.maxHoldingDays} Gün
+                    </div>
+                  )}
                 </td>
 
                 <td className="py-3.5 px-4 text-right">

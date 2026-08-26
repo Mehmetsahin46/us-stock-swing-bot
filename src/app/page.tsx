@@ -24,6 +24,7 @@ import {
 } from '@/lib/portfolioManager';
 import { INITIAL_DUAL_STATE } from '@/lib/constants';
 import { mergeDualStates } from '@/lib/stateSync';
+import { sendLocalNotification } from '@/lib/notificationManager';
 import { LayoutDashboard, Radio, History, PlayCircle, ShieldCheck, Bell, ShieldAlert, Plus, Newspaper } from 'lucide-react';
 
 const STORAGE_KEY = 'dual_market_swing_portfolio_v7_supabase';
@@ -152,6 +153,9 @@ export default function HomePage() {
       };
       persistState(updated);
       showToast(message);
+      sendLocalNotification(`🔔 Yeni İşlem: ${signal.displayTicker} (${signal.market})`, {
+        body: `${message} - Hedef: ${signal.estimatedTimeframe || 'Bilinmiyor'}`
+      });
     } else {
       showToast(`Uyarı: ${message}`);
     }

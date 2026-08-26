@@ -1,5 +1,24 @@
 import { Candle, CurrencyType, MarketType, SectorType, Signal, StockNewsItem, StrategyType, TechnicalIndicators } from './types';
 
+function calculateEstimatedTimeframe(targetPrice: number, currentPrice: number, atr14: number, rvol: number): { estimatedDays: number; estimatedTimeframe: string } {
+  const distance = Math.max(0.1, targetPrice - currentPrice);
+  const dailyPace = Math.max(currentPrice * 0.007, atr14 * (rvol > 1.2 ? 0.75 : 0.45));
+  const estimatedDays = Math.max(3, Math.min(60, Math.ceil(distance / dailyPace)));
+
+  let estimatedTimeframe = `~${estimatedDays} İş Günü`;
+  if (estimatedDays <= 5) {
+    estimatedTimeframe = `~3 - 5 Gün (Hızlı İvme)`;
+  } else if (estimatedDays <= 12) {
+    estimatedTimeframe = `~1 - 2 Hafta`;
+  } else if (estimatedDays <= 25) {
+    estimatedTimeframe = `~3 - 4 Hafta (Orta Vade)`;
+  } else {
+    estimatedTimeframe = `~1 - 2 Ay (Güçlü Trend)`;
+  }
+
+  return { estimatedDays, estimatedTimeframe };
+}
+
 export function evaluateSignal(
   ticker: string,
   displayTicker: string,
@@ -17,22 +36,16 @@ export function evaluateSignal(
   let catSummary = catalystInfo ? catalystInfo.catalystSummary : undefined;
   const catNews = catalystInfo ? catalystInfo.news : undefined;
 
-  // =========================================================================
-  // 🛡️ AKILLI PARA / HABER TUZAĞI (FOMO & BULL TRAP) KORUMA KURALLARI
-  // =========================================================================
-  // 1. "Habere Atlama / Tepe Mal Kilitleme" Koruması:
-  // Eğer hisse zaten aşırı şişmişse (RSI > 70) veya fiyatta aşırı uzama varsa,
-  // iyi haber gelse bile akıllı para satış için kullanır! Skoru düşür & uyar.
+  // 🛡️ AKILLI PARA / HABER TUZAĞI (FOMO & BULL TRAP) KORUMASI
   const isOverboughtTrap = rsi14 >= 72 || (ema20 > 0 && (price - ema20) / ema20 > 0.08);
   if (isOverboughtTrap && catScore > 0) {
-    catScore = -15; // Tepe tuzağı riski nedeniyle pozitif haber çarpanını sıfırla/kır
+    catScore = -15;
     catSummary = '⚠️ Tepe Mal Kilitleme Riski: Hisse aşırı şişkin bölgede, iyi habere rağmen düzeltme bekleniyor.';
   }
 
-  // 2. "Düşen Bıçak / Kötü Bilanço" Koruması:
-  // Eğer hisse 50 EMA altında ve negatif haber varsa alım kesinlikle iptal edilir.
+  // 🛡️ Düşen Bıçak / Kötü Bilanço Koruması
   if (price < ema50 && catScore < 0) {
-    return null; // Ayı trendindeki kötü haberli hisseyi doğrudan ele
+    return null;
   }
 
   // 1. STRATEGY: EMA 20 Pullback (Trend Desteği)
@@ -51,6 +64,7 @@ export function evaluateSignal(
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
       const technicalScore = Math.min(94, Math.round(70 + (rvol > 1 ? 12 : 6) + (rsi14 > 45 ? 10 : 5)));
       const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
       return {
         id: `sig_${ticker}_${Date.now()}`,
@@ -75,15 +89,16 @@ export function evaluateSignal(
         riskReward,
         potentialGainPct,
         maxRiskPct,
+        estimatedDays,
+        estimatedTimeframe,
         timestamp: new Date().toISOString()
       };
     }
   }
 
   // 2. STRATEGY: High-Volume Breakout (Zirve / Direnç Kırılımı)
-  // Tepe tuzağına düşmemek için RVOL teyidi şart
   const isBreakout = price >= high20 * 0.985 && rvol >= 1.05 && price >= ema20;
-  const isMomentumRSI = rsi14 >= 50 && rsi14 <= 74; // RSI 74 üzeri FOMO kırılımlarına girilmez
+  const isMomentumRSI = rsi14 >= 50 && rsi14 <= 74;
 
   if (isBreakout && isMomentumRSI) {
     const stopLoss = Number((price - 1.6 * atr14).toFixed(2));
@@ -96,6 +111,7 @@ export function evaluateSignal(
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
       const technicalScore = Math.min(96, Math.round(75 + (rvol > 1.2 ? 14 : 8) + (changePercent > 0.5 ? 6 : 2)));
       const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
       return {
         id: `sig_${ticker}_${Date.now()}`,
@@ -120,6 +136,8 @@ export function evaluateSignal(
         riskReward,
         potentialGainPct,
         maxRiskPct,
+        estimatedDays,
+        estimatedTimeframe,
         timestamp: new Date().toISOString()
       };
     }
@@ -138,6 +156,7 @@ export function evaluateSignal(
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
       const technicalScore = Math.min(92, Math.round(68 + (changePercent > 1.5 ? 12 : 6) + (rsi14 > 58 ? 8 : 4)));
       const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
       return {
         id: `sig_${ticker}_${Date.now()}`,
@@ -162,13 +181,14 @@ export function evaluateSignal(
         riskReward,
         potentialGainPct,
         maxRiskPct,
+        estimatedDays,
+        estimatedTimeframe,
         timestamp: new Date().toISOString()
       };
     }
   }
 
   // 4. STRATEGY: Oversold Mean Reversion (Dip Tepkisi)
-  // Dipte iyi haber gelirse muazzam bir dönüş fırsatıdır!
   const isOversold = rsi14 <= 38 && (changePercent >= -0.5 || (candles.length > 2 && price >= candles[candles.length - 2].low * 0.99));
 
   if (isOversold) {
@@ -182,6 +202,7 @@ export function evaluateSignal(
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
       const technicalScore = Math.min(90, Math.round(65 + (40 - rsi14) * 1.5));
       const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
       return {
         id: `sig_${ticker}_${Date.now()}`,
@@ -206,6 +227,8 @@ export function evaluateSignal(
         riskReward,
         potentialGainPct,
         maxRiskPct,
+        estimatedDays,
+        estimatedTimeframe,
         timestamp: new Date().toISOString()
       };
     }

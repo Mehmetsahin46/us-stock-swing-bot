@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Activity, RefreshCw, Settings, CheckCircle2, Clock, CloudLightning, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Activity, RefreshCw, Settings, CheckCircle2, Clock, CloudLightning, ShieldCheck, ShieldAlert, Bell, BellRing } from 'lucide-react';
 import { MarketRegime, MarketType } from '@/lib/types';
+import { requestNotificationPermission, getNotificationPermission } from '@/lib/notificationManager';
 
 interface HeaderProps {
   onScan: () => void;
@@ -43,6 +44,11 @@ export const Header: React.FC<HeaderProps> = ({
     isOpen: false,
     text: 'BIST: Kontrol...'
   });
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
+
+  useEffect(() => {
+    setNotifPermission(getNotificationPermission());
+  }, []);
 
   useEffect(() => {
     function checkHours() {
@@ -217,6 +223,31 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
           <span>{isScanning ? 'Taranıyor...' : 'Tara & Oto-Trade'}</span>
+        </button>
+
+        <button
+          onClick={async () => {
+            const granted = await requestNotificationPermission();
+            setNotifPermission(granted ? 'granted' : 'denied');
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer shadow-sm ${
+            notifPermission === 'granted'
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+              : 'bg-card hover:bg-slate-800 text-slate-300 hover:text-white border-border'
+          }`}
+          title={notifPermission === 'granted' ? 'Mobil & Masaüstü Bildirimler Aktif' : 'Telefona Bildirim İzni Ver'}
+        >
+          {notifPermission === 'granted' ? (
+            <>
+              <BellRing className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span className="hidden sm:inline">Bildirim Açık</span>
+            </>
+          ) : (
+            <>
+              <Bell className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Bildirimleri Aç</span>
+            </>
+          )}
         </button>
 
         <button

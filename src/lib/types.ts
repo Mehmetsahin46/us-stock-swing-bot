@@ -106,6 +106,8 @@ export interface Signal {
   riskReward: number;
   potentialGainPct: number;
   maxRiskPct: number;
+  estimatedDays?: number;
+  estimatedTimeframe?: string;
   timestamp: string;
 }
 
@@ -151,6 +153,8 @@ export interface TradePosition {
   exitReason?: string;
   daysHeld: number;
   maxHoldingDays: number;
+  estimatedDays?: number;
+  estimatedTimeframe?: string;
 }
 
 export interface MarketPortfolio {
