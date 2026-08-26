@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Activity, RefreshCw, Settings, CheckCircle2, Clock, CloudLightning, ShieldCheck, ShieldAlert, Bell, BellRing, Smartphone } from 'lucide-react';
+import { Activity, RefreshCw, Settings, CheckCircle2, Clock, CloudLightning, ShieldCheck, ShieldAlert, Bell, BellRing, Smartphone, HeartPulse, FileText, Sliders } from 'lucide-react';
 import { MarketRegime, MarketType } from '@/lib/types';
 import { requestNotificationPermission, getNotificationPermission } from '@/lib/notificationManager';
 
@@ -11,6 +11,9 @@ interface HeaderProps {
   onOpenSettings: () => void;
   onOpenAddStock?: () => void;
   onOpenInstall?: () => void;
+  onOpenHealth?: () => void;
+  onOpenDailyReport?: () => void;
+  onOpenNotifRules?: () => void;
   lastScanTime: string | null;
   activeMarket: MarketType;
   onSelectMarket: (m: MarketType) => void;
@@ -28,6 +31,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   onOpenAddStock,
   onOpenInstall,
+  onOpenHealth,
+  onOpenDailyReport,
+  onOpenNotifRules,
   lastScanTime,
   activeMarket,
   onSelectMarket,
@@ -46,166 +52,111 @@ export const Header: React.FC<HeaderProps> = ({
     isOpen: false,
     text: 'BIST: Kontrol...'
   });
-  const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
+  const [notifPermission, setNotifPermission] = useState<string>('default');
 
   useEffect(() => {
     setNotifPermission(getNotificationPermission());
-  }, []);
 
-  useEffect(() => {
-    function checkHours() {
+    function checkPiyasalar() {
       const now = new Date();
+      const day = now.getUTCDay(); // 0 = Pazar, 6 = Cts
+      const isHaftaIci = day >= 1 && day <= 5;
 
-      const nyOptions: Intl.DateTimeFormatOptions = { timeZone: 'America/New_York', hour12: false };
-      const nyDay = new Intl.DateTimeFormat('en-US', { ...nyOptions, weekday: 'short' }).format(now);
-      const nyHour = parseInt(new Intl.DateTimeFormat('en-US', { ...nyOptions, hour: 'numeric' }).format(now), 10);
-      const nyMin = parseInt(new Intl.DateTimeFormat('en-US', { ...nyOptions, minute: 'numeric' }).format(now), 10);
-      const isNyWeekday = !['Sat', 'Sun'].includes(nyDay);
-      const nyMinutes = nyHour * 60 + nyMin;
-      const isNyOpen = isNyWeekday && nyMinutes >= 570 && nyMinutes < 960;
-      setUsStatus({
-        isOpen: isNyOpen,
-        text: isNyOpen ? '🇺🇸 ABD: AÇIK' : '🇺🇸 ABD: KAPALI'
+      const utcHours = now.getUTCHours();
+      const utcMinutes = now.getUTCMinutes();
+      const utcTotal = utcHours * 60 + utcMinutes;
+
+      // BIST (07:00 - 15:00 UTC = 10:00 - 18:00 TSİ)
+      const bistAcik = isHaftaIci && utcTotal >= 420 && utcTotal < 900;
+      setBistStatus({
+        isOpen: bistAcik,
+        text: bistAcik ? 'BIST: AÇIK 🟢' : 'BIST: KAPALI 🔴'
       });
 
-      const istOptions: Intl.DateTimeFormatOptions = { timeZone: 'Europe/Istanbul', hour12: false };
-      const istDay = new Intl.DateTimeFormat('en-US', { ...istOptions, weekday: 'short' }).format(now);
-      const istHour = parseInt(new Intl.DateTimeFormat('en-US', { ...istOptions, hour: 'numeric' }).format(now), 10);
-      const istMin = parseInt(new Intl.DateTimeFormat('en-US', { ...istOptions, minute: 'numeric' }).format(now), 10);
-      const isIstWeekday = !['Sat', 'Sun'].includes(istDay);
-      const istMinutes = istHour * 60 + istMin;
-      const isBistOpen = isIstWeekday && istMinutes >= 600 && istMinutes < 1080;
-      setBistStatus({
-        isOpen: isBistOpen,
-        text: isBistOpen ? '🇹🇷 BIST: AÇIK' : '🇹🇷 BIST: KAPALI'
+      // NYSE (13:30 - 20:00 UTC = 16:30 - 23:00 TSİ)
+      const nyseAcik = isHaftaIci && utcTotal >= 810 && utcTotal < 1200;
+      setUsStatus({
+        isOpen: nyseAcik,
+        text: nyseAcik ? 'NYSE: AÇIK 🟢' : 'NYSE: KAPALI 🔴'
       });
     }
 
-    checkHours();
-    const interval = setInterval(checkHours, 60000);
+    checkPiyasalar();
+    const interval = setInterval(checkPiyasalar, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  const currentRegime = activeMarket === 'BIST' ? bistRegime : usRegime;
-
   return (
-    <header className="border-b border-border bg-surface/95 backdrop-blur-lg sticky top-0 z-40 px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+    <header className="border-b border-border/80 bg-background/95 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-md">
+      {/* Brand & Market Switcher */}
       <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-gradient-to-tr from-emerald-500 via-primary-500 to-indigo-600 shadow-lg shadow-primary-500/25">
-          <Activity className="w-5 h-5 text-white" />
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary-600 via-indigo-600 to-accent-500 p-0.5 shadow-lg shadow-primary-500/20 flex items-center justify-center flex-shrink-0">
+          <Activity className="w-5 h-5 text-white animate-pulse" />
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-extrabold text-lg text-white tracking-tight">Global & BIST Swing Bot</h1>
-            <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Canlıda Aktif
-            </span>
+            <h1 className="text-sm sm:text-base font-extrabold text-white tracking-tight flex items-center gap-1.5">
+              <span>SwingBot Pro</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-primary-500/20 text-primary-400 border border-primary-500/30">
+                Kuant 2.0
+              </span>
+            </h1>
           </div>
-          <p className="text-xs text-slate-400 font-medium">
-            🇹🇷 BIST (10:00-18:00) & 🇺🇸 NYSE/NASDAQ (16:30-23:00) Otomatik Ticaret
+          <p className="text-[11px] text-muted hidden sm:block">
+            BIST & ABD Çoklu Strateji & Kuant Analiz Terminali
           </p>
         </div>
+
+        {/* Global Market Switcher */}
+        <div className="flex items-center bg-card border border-border rounded-xl p-0.5 text-xs ml-1 sm:ml-3">
+          <button
+            onClick={() => onSelectMarket('BIST')}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+              activeMarket === 'BIST'
+                ? 'bg-red-500/30 text-white border border-red-500/50 shadow-sm'
+                : 'text-muted hover:text-white'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${bistStatus.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
+            <span>🇹🇷 BIST</span>
+          </button>
+          <button
+            onClick={() => onSelectMarket('US')}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+              activeMarket === 'US'
+                ? 'bg-blue-500/30 text-white border border-blue-500/50 shadow-sm'
+                : 'text-muted hover:text-white'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${usStatus.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
+            <span>🇺🇸 ABD</span>
+          </button>
+        </div>
       </div>
 
-      {/* Modern High-End Market Switcher */}
-      <div className="flex items-center bg-slate-900/90 border border-slate-700/80 rounded-2xl p-1.5 shadow-inner gap-1.5">
-        <button
-          onClick={() => onSelectMarket('BIST')}
-          className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-            activeMarket === 'BIST'
-              ? 'bg-gradient-to-r from-red-600/30 to-red-500/20 text-white border border-red-500/50 shadow-md shadow-red-500/10 scale-[1.02]'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-          }`}
-        >
-          <span className="text-base leading-none">🇹🇷</span>
-          <div className="text-left">
-            <div className="flex items-center gap-1.5">
-              <span>Borsa İstanbul</span>
-              <span
-                className={`w-2 h-2 rounded-full ring-2 ${
-                  bistStatus.isOpen
-                    ? 'bg-emerald-400 ring-emerald-500/30 animate-pulse'
-                    : 'bg-rose-500 ring-rose-500/30'
-                }`}
-                title={bistStatus.isOpen ? 'BIST Seansı Açık' : 'BIST Seansı Kapalı'}
-              />
-              <span className={`text-[9px] font-semibold px-1 rounded ${
-                bistStatus.isOpen ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'
-              }`}>
-                {bistStatus.isOpen ? 'AÇIK' : 'KAPALI'}
-              </span>
-            </div>
-            <div className="text-[10px] text-red-400 font-mono font-medium">
-              ₺{bistEquity.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-            </div>
-          </div>
-        </button>
-
-        <div className="w-px h-6 bg-slate-700/60" />
-
-        <button
-          onClick={() => onSelectMarket('US')}
-          className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-            activeMarket === 'US'
-              ? 'bg-gradient-to-r from-blue-600/30 to-indigo-500/20 text-white border border-blue-500/50 shadow-md shadow-blue-500/10 scale-[1.02]'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-          }`}
-        >
-          <span className="text-base leading-none">🇺🇸</span>
-          <div className="text-left">
-            <div className="flex items-center gap-1.5">
-              <span>ABD Borsaları</span>
-              <span
-                className={`w-2 h-2 rounded-full ring-2 ${
-                  usStatus.isOpen
-                    ? 'bg-emerald-400 ring-emerald-500/30 animate-pulse'
-                    : 'bg-rose-500 ring-rose-500/30'
-                }`}
-                title={usStatus.isOpen ? 'ABD Seansı Açık' : 'ABD Seansı Kapalı'}
-              />
-              <span className={`text-[9px] font-semibold px-1 rounded ${
-                usStatus.isOpen ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'
-              }`}>
-                {usStatus.isOpen ? 'AÇIK' : 'KAPALI'}
-              </span>
-            </div>
-            <div className="text-[10px] text-blue-400 font-mono font-medium">
-              ${usEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-            </div>
-          </div>
-        </button>
-      </div>
-
-      <div className="flex items-center flex-wrap gap-2">
-        {currentRegime && (
-          <div className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold ${
-            currentRegime.trend === 'BULLISH'
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-              : 'bg-danger-500/10 border-danger-500/30 text-danger-400'
-          }`} title={currentRegime.reason}>
-            {currentRegime.trend === 'BULLISH' ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
-            <span>{currentRegime.trend === 'BULLISH' ? 'Endeks: Boğa' : 'Endeks: Ayı (Korumada)'}</span>
-          </div>
+      {/* Right Action Buttons */}
+      <div className="flex items-center gap-2">
+        {onOpenHealth && (
+          <button
+            onClick={onOpenHealth}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-emerald-400 border border-slate-700 text-xs font-semibold transition-all cursor-pointer"
+            title="Sistem & Veri Sağlığı (Heartbeat)"
+          >
+            <HeartPulse className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Sistem Sağlığı</span>
+          </button>
         )}
 
-        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${
-          bistStatus.isOpen 
-            ? 'bg-primary-500/10 border-primary-500/30 text-primary-400' 
-            : 'bg-slate-800/80 border-slate-700 text-slate-400'
-        }`}>
-          <span className={`w-2 h-2 rounded-full ${bistStatus.isOpen ? 'bg-primary-500 animate-pulse' : 'bg-slate-500'}`} />
-          <span>{bistStatus.text}</span>
-        </div>
-
-        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${
-          usStatus.isOpen 
-            ? 'bg-primary-500/10 border-primary-500/30 text-primary-400' 
-            : 'bg-slate-800/80 border-slate-700 text-slate-400'
-        }`}>
-          <span className={`w-2 h-2 rounded-full ${usStatus.isOpen ? 'bg-primary-500 animate-pulse' : 'bg-slate-500'}`} />
-          <span>{usStatus.text}</span>
-        </div>
+        {onOpenDailyReport && (
+          <button
+            onClick={onOpenDailyReport}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all cursor-pointer"
+            title="Günlük AI & Kuant Yönetici Raporu"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Günlük Rapor</span>
+          </button>
+        )}
 
         {onOpenAddStock && (
           <button
@@ -214,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
             title="Manuel Sembol / Hisse Ekle"
           >
             <span className="text-sm font-bold">+</span>
-            <span>Hisse Ekle</span>
+            <span className="hidden sm:inline">Hisse Ekle</span>
           </button>
         )}
 
@@ -227,30 +178,15 @@ export const Header: React.FC<HeaderProps> = ({
           <span>{isScanning ? 'Taranıyor...' : 'Tara & Oto-Trade'}</span>
         </button>
 
-        <button
-          onClick={async () => {
-            const granted = await requestNotificationPermission();
-            setNotifPermission(granted ? 'granted' : 'denied');
-          }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer shadow-sm ${
-            notifPermission === 'granted'
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
-              : 'bg-card hover:bg-slate-800 text-slate-300 hover:text-white border-border'
-          }`}
-          title={notifPermission === 'granted' ? 'Mobil & Masaüstü Bildirimler Aktif' : 'Telefona Bildirim İzni Ver'}
-        >
-          {notifPermission === 'granted' ? (
-            <>
-              <BellRing className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-              <span className="hidden sm:inline">Bildirim Açık</span>
-            </>
-          ) : (
-            <>
-              <Bell className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Bildirimleri Aç</span>
-            </>
-          )}
-        </button>
+        {onOpenNotifRules && (
+          <button
+            onClick={onOpenNotifRules}
+            className="p-1.5 rounded-lg bg-card hover:bg-slate-800 border border-border text-slate-300 hover:text-white transition-colors cursor-pointer"
+            title="Gelişmiş Bildirim Kuralları"
+          >
+            <Sliders className="w-4 h-4 text-amber-400" />
+          </button>
+        )}
 
         {onOpenInstall && (
           <button

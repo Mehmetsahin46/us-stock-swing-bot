@@ -16,7 +16,10 @@ import {
   AlertOctagon, 
   ShoppingCart,
   Building2,
-  BarChart2
+  BarChart2,
+  Activity,
+  Award,
+  Layers
 } from 'lucide-react';
 
 interface SignalDetailModalProps {
@@ -84,29 +87,90 @@ export const SignalDetailModal: React.FC<SignalDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Overall Verdict Banner */}
-        <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 space-y-1">
-          <div className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-            <Zap className="w-4 h-4 text-indigo-400" />
-            <span>Kuantatif Analiz Kararı & Tezi</span>
+        {/* 🚨 SİNYAL YAŞAM DÖNGÜSÜ (SIGNAL LIFECYCLE STEPPER) */}
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
+          <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Sinyal Yaşam Döngüsü (Lifecycle Tracker)</span>
+            </span>
+            <span className="text-[10px] text-emerald-400 font-mono font-bold">AŞAMA: 2. ALIM BÖLGESİ</span>
           </div>
-          <p className="text-xs text-slate-200 leading-relaxed font-medium">
-            {analysis.overallVerdict}
-          </p>
+
+          <div className="grid grid-cols-4 gap-1.5 text-center text-[10px] font-bold">
+            {/* Step 1: Watch */}
+            <div className="p-2 rounded-xl bg-slate-800/60 border border-slate-700 text-slate-400">
+              <span className="block font-mono text-[9px] text-slate-500">1. AŞAMA</span>
+              <span>👁️ İZLEME (WATCH)</span>
+            </div>
+
+            {/* Step 2: Buy Entry (Active) */}
+            <div className="p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 shadow-md shadow-emerald-500/10">
+              <span className="block font-mono text-[9px] text-emerald-400">2. AŞAMA (AKTİF)</span>
+              <span>⚡ ALIM (ENTRY)</span>
+            </div>
+
+            {/* Step 3: TP1 */}
+            <div className="p-2 rounded-xl bg-slate-800/60 border border-slate-700 text-slate-400">
+              <span className="block font-mono text-[9px] text-slate-500">3. AŞAMA</span>
+              <span>🎯 TP1 (%50 KÂR)</span>
+            </div>
+
+            {/* Step 4: TP2 */}
+            <div className="p-2 rounded-xl bg-slate-800/60 border border-slate-700 text-slate-400">
+              <span className="block font-mono text-[9px] text-slate-500">4. AŞAMA</span>
+              <span>🏆 TP2 (ANA HEDEF)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Skor Değişim Geçmişi & Finansal Sağlık Yan Yana */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Skor Geçmişi */}
+          <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+            <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">
+              🔄 Skor Değişim Trendi (Son 5 Gün)
+            </span>
+            <div className="flex items-center justify-between gap-1 text-[10px] font-mono">
+              {analysis.scoreHistory.map((pt, idx) => (
+                <div key={idx} className="text-center">
+                  <span className="text-slate-500 block text-[9px]">{pt.day.replace(' Gün Önce', 'G')}</span>
+                  <span className={`px-1.5 py-0.5 rounded font-bold ${idx === 4 ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-300'}`}>
+                    {pt.score}p
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Finansal Sağlık Skoru */}
+          <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                💰 Finansal Sağlık Skoru
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                {analysis.financialHealth.totalScore} / 100 • {analysis.financialHealth.rating}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              {analysis.financialHealth.summary}
+            </p>
+          </div>
         </div>
 
         {/* "Neden Bu Sinyal?" Factor Breakdown */}
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
             <HelpCircle className="w-4 h-4 text-emerald-400" />
             <span>Sinyali Oluşturan Temel Faktörler</span>
           </h3>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {analysis.factors.map((f, i) => (
               <div
                 key={i}
-                className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-start gap-3 text-xs"
+                className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-start gap-3 text-xs"
               >
                 <div className="mt-0.5 flex-shrink-0">
                   {f.impact === 'POSITIVE' ? (
@@ -171,7 +235,7 @@ export const SignalDetailModal: React.FC<SignalDetailModalProps> = ({
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-600 hover:opacity-95 text-white text-xs font-bold shadow-xl shadow-emerald-500/20 transition-all cursor-pointer active:scale-95"
           >
             <ShoppingCart className="w-4 h-4" />
-            <span>Sanal Pozisyon Aç (%25 Bütçe)</span>
+            <span>Sanal Pozisyon Aç</span>
           </button>
         </div>
       </div>

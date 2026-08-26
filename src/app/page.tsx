@@ -17,6 +17,9 @@ import { TopOpportunitiesPanel } from '@/components/TopOpportunitiesPanel';
 import { MarketHeatmapView } from '@/components/MarketHeatmapView';
 import { SignalDetailModal } from '@/components/SignalDetailModal';
 import { WatchlistView } from '@/components/WatchlistView';
+import { SystemHealthModal } from '@/components/SystemHealthModal';
+import { DailyReportModal } from '@/components/DailyReportModal';
+import { NotificationRulesModal } from '@/components/NotificationRulesModal';
 import { 
   DualPortfolioState, 
   MarketPortfolio,
@@ -64,6 +67,10 @@ export default function HomePage() {
   const [addStockOpen, setAddStockOpen] = useState<boolean>(false);
   const [installModalOpen, setInstallModalOpen] = useState<boolean>(false);
   const [detailModalOpen, setDetailModalOpen] = useState<boolean>(false);
+  const [healthModalOpen, setHealthModalOpen] = useState<boolean>(false);
+  const [dailyReportModalOpen, setDailyReportModalOpen] = useState<boolean>(false);
+  const [notifRulesModalOpen, setNotifRulesModalOpen] = useState<boolean>(false);
+
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null);
   const [selectedResult, setSelectedResult] = useState<StockScanResult | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -269,6 +276,8 @@ export default function HomePage() {
     .filter(p => p.status === 'OPEN')
     .map(p => p.ticker);
 
+  const allActiveSignals = scanResults.map(r => r.signal).filter((s): s is Signal => s !== null);
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header
@@ -277,6 +286,9 @@ export default function HomePage() {
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenAddStock={() => setAddStockOpen(true)}
         onOpenInstall={() => setInstallModalOpen(true)}
+        onOpenHealth={() => setHealthModalOpen(true)}
+        onOpenDailyReport={() => setDailyReportModalOpen(true)}
+        onOpenNotifRules={() => setNotifRulesModalOpen(true)}
         lastScanTime={dualState.lastScanTime}
         activeMarket={activeMarket}
         onSelectMarket={setActiveMarket}
@@ -557,6 +569,26 @@ export default function HomePage() {
         signal={selectedSignal}
         result={selectedResult}
         onOpenTrade={handleOpenPaperTrade}
+      />
+
+      <SystemHealthModal
+        isOpen={healthModalOpen}
+        onClose={() => setHealthModalOpen(false)}
+      />
+
+      <DailyReportModal
+        isOpen={dailyReportModalOpen}
+        onClose={() => setDailyReportModalOpen(false)}
+        signals={allActiveSignals}
+        bistPortfolio={dualState.bist}
+        usPortfolio={dualState.us}
+        macro={null}
+        onOpenTrade={handleOpenPaperTrade}
+      />
+
+      <NotificationRulesModal
+        isOpen={notifRulesModalOpen}
+        onClose={() => setNotifRulesModalOpen(false)}
       />
     </div>
   );
