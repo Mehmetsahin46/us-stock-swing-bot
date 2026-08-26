@@ -44,6 +44,20 @@ export interface TechnicalIndicators {
   low20: number;
 }
 
+export interface StockNewsItem {
+  id: string;
+  ticker: string;
+  displayTicker: string;
+  title: string;
+  summary: string;
+  source: string;
+  url?: string;
+  publishedAt: string;
+  category: 'BILANCO' | 'YATIRIM' | 'SOZLESME' | 'ANALIST' | 'GENEL';
+  sentiment: 'BULLISH' | 'NEUTRAL' | 'BEARISH';
+  impactScore: number; // e.g. +15 for earnings beat, +10 for contract, -20 for downgrade
+}
+
 export interface StockScanResult {
   ticker: string;
   displayTicker: string;
@@ -53,6 +67,8 @@ export interface StockScanResult {
   currency: CurrencyType;
   technicals: TechnicalIndicators;
   signal: Signal | null;
+  news?: StockNewsItem[];
+  catalystScore?: number;
 }
 
 export interface MarketRegime {
@@ -78,6 +94,10 @@ export interface Signal {
   strategyName: string;
   title: string;
   score: number;
+  technicalScore?: number;
+  catalystScore?: number;
+  catalystSummary?: string;
+  activeCatalysts?: StockNewsItem[];
   reason: string;
   suggestedEntry: number;
   stopLoss: number;

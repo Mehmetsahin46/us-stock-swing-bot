@@ -114,7 +114,19 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="text-left">
             <div className="flex items-center gap-1.5">
               <span>Borsa İstanbul</span>
-              {bistAuto && <span className="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-500/30" />}
+              <span
+                className={`w-2 h-2 rounded-full ring-2 ${
+                  bistStatus.isOpen
+                    ? 'bg-emerald-400 ring-emerald-500/30 animate-pulse'
+                    : 'bg-rose-500 ring-rose-500/30'
+                }`}
+                title={bistStatus.isOpen ? 'BIST Seansı Açık' : 'BIST Seansı Kapalı'}
+              />
+              <span className={`text-[9px] font-semibold px-1 rounded ${
+                bistStatus.isOpen ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'
+              }`}>
+                {bistStatus.isOpen ? 'AÇIK' : 'KAPALI'}
+              </span>
             </div>
             <div className="text-[10px] text-red-400 font-mono font-medium">
               ₺{bistEquity.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
@@ -136,7 +148,19 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="text-left">
             <div className="flex items-center gap-1.5">
               <span>ABD Borsaları</span>
-              {usAuto && <span className="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-500/30" />}
+              <span
+                className={`w-2 h-2 rounded-full ring-2 ${
+                  usStatus.isOpen
+                    ? 'bg-emerald-400 ring-emerald-500/30 animate-pulse'
+                    : 'bg-rose-500 ring-rose-500/30'
+                }`}
+                title={usStatus.isOpen ? 'ABD Seansı Açık' : 'ABD Seansı Kapalı'}
+              />
+              <span className={`text-[9px] font-semibold px-1 rounded ${
+                usStatus.isOpen ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'
+              }`}>
+                {usStatus.isOpen ? 'AÇIK' : 'KAPALI'}
+              </span>
             </div>
             <div className="text-[10px] text-blue-400 font-mono font-medium">
               ${usEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })}

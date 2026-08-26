@@ -507,6 +507,8 @@ export async function scanUniverse(marketFilter: 'ALL' | 'US' | 'BIST' = 'ALL'):
   const results: StockScanResult[] = [];
   const chunkSize = 15;
 
+  const { fetchStockNewsAndCatalysts } = await import('./newsEngine');
+
   for (let i = 0; i < targetUniverse.length; i += chunkSize) {
     const chunk = targetUniverse.slice(i, i + chunkSize);
     const promises = chunk.map(async (item) => {
@@ -514,7 +516,23 @@ export async function scanUniverse(marketFilter: 'ALL' | 'US' | 'BIST' = 'ALL'):
       const technicals = calculateTechnicals(candles);
       if (!technicals) return null;
 
-      const signal = evaluateSignal(item.ticker, item.displayTicker, item.sector, item.market, item.currency, technicals, candles);
+      // Fetch latest news & catalysts for the ticker
+      let catalystInfo;
+      try {
+        catalystInfo = await fetchStockNewsAndCatalysts(item.ticker, item.displayTicker, item.market);
+      } catch (e) {}
+
+      const signal = evaluateSignal(
+        item.ticker,
+        item.displayTicker,
+        item.sector,
+        item.market,
+        item.currency,
+        technicals,
+        candles,
+        catalystInfo
+      );
+
       return {
         ticker: item.ticker,
         displayTicker: item.displayTicker,
@@ -523,7 +541,9 @@ export async function scanUniverse(marketFilter: 'ALL' | 'US' | 'BIST' = 'ALL'):
         market: item.market,
         currency: item.currency,
         technicals,
-        signal
+        signal,
+        news: catalystInfo?.news,
+        catalystScore: catalystInfo?.catalystScore
       };
     });
 

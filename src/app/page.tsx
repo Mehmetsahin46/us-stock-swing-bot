@@ -10,6 +10,7 @@ import { BacktestView } from '@/components/BacktestView';
 import { EquityChart } from '@/components/EquityChart';
 import { SettingsModal } from '@/components/SettingsModal';
 import { AddStockModal } from '@/components/AddStockModal';
+import { NewsView } from '@/components/NewsView';
 import { 
   DualPortfolioState, 
   MarketPortfolio,
@@ -23,7 +24,7 @@ import {
 } from '@/lib/portfolioManager';
 import { INITIAL_DUAL_STATE } from '@/lib/constants';
 import { mergeDualStates } from '@/lib/stateSync';
-import { LayoutDashboard, Radio, History, PlayCircle, ShieldCheck, Bell, ShieldAlert, Plus } from 'lucide-react';
+import { LayoutDashboard, Radio, History, PlayCircle, ShieldCheck, Bell, ShieldAlert, Plus, Newspaper } from 'lucide-react';
 
 const STORAGE_KEY = 'dual_market_swing_portfolio_v7_supabase';
 
@@ -34,7 +35,7 @@ export default function HomePage() {
   const [activeMarket, setActiveMarket] = useState<MarketType>('BIST');
   const [scanResults, setScanResults] = useState<StockScanResult[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'SCANNER' | 'HISTORY' | 'BACKTEST'>('DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'SCANNER' | 'NEWS' | 'HISTORY' | 'BACKTEST'>('DASHBOARD');
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [addStockOpen, setAddStockOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -270,6 +271,18 @@ export default function HomePage() {
             </button>
 
             <button
+              onClick={() => setActiveTab('NEWS')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'NEWS'
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm font-bold'
+                  : 'text-slate-400 hover:text-white hover:bg-card'
+              }`}
+            >
+              <Newspaper className="w-4 h-4 text-indigo-400" />
+              <span>Haberler & Bilanço</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('HISTORY')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'HISTORY'
@@ -376,7 +389,15 @@ export default function HomePage() {
           />
         )}
 
-        {/* TAB 3: TRADE HISTORY */}
+        {/* TAB 3: NEWS & CATALYSTS */}
+        {activeTab === 'NEWS' && (
+          <NewsView
+            results={scanResults}
+            onOpenTrade={handleOpenPaperTrade}
+          />
+        )}
+
+        {/* TAB 4: TRADE HISTORY */}
         {activeTab === 'HISTORY' && (
           <TradeHistory history={currentPortfolio.history} />
         )}

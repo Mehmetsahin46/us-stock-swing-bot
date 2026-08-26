@@ -1,4 +1,4 @@
-import { Candle, CurrencyType, MarketType, SectorType, Signal, StrategyType, TechnicalIndicators } from './types';
+import { Candle, CurrencyType, MarketType, SectorType, Signal, StockNewsItem, StrategyType, TechnicalIndicators } from './types';
 
 export function evaluateSignal(
   ticker: string,
@@ -7,10 +7,14 @@ export function evaluateSignal(
   market: MarketType,
   currency: CurrencyType,
   tech: TechnicalIndicators,
-  candles: Candle[]
+  candles: Candle[],
+  catalystInfo?: { catalystScore: number; catalystSummary: string; news: StockNewsItem[] }
 ): Signal | null {
   const { price, ema9, ema20, ema50, rsi14, atr14, rvol, high20, changePercent } = tech;
   const currSign = currency === 'TRY' ? '₺' : '$';
+  const catScore = catalystInfo ? catalystInfo.catalystScore : 0;
+  const catSummary = catalystInfo ? catalystInfo.catalystSummary : undefined;
+  const catNews = catalystInfo ? catalystInfo.news : undefined;
 
   // 1. STRATEGY: EMA 20 Pullback (Trend Desteği)
   const isUptrend = price >= ema50 * 0.98 || ema20 > ema50 * 0.98;
@@ -26,6 +30,8 @@ export function evaluateSignal(
       const potentialGainPct = Number((((target2 - price) / price) * 100).toFixed(2));
       const maxRiskPct = Number((((price - stopLoss) / price) * 100).toFixed(2));
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
+      const technicalScore = Math.min(94, Math.round(70 + (rvol > 1 ? 12 : 6) + (rsi14 > 45 ? 10 : 5)));
+      const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
 
       return {
         id: `sig_${ticker}_${Date.now()}`,
@@ -37,8 +43,12 @@ export function evaluateSignal(
         strategy: 'EMA_PULLBACK',
         strategyName: 'EMA 20 Trend Desteği (Pullback)',
         title: `${displayTicker} - 20 Günlük Ortalama Desteğinden Tepki`,
-        score: Math.min(96, Math.round(70 + (rvol > 1 ? 12 : 6) + (rsi14 > 45 ? 10 : 5))),
-        reason: `Hisse yükselen trendde 20 EMA (${currSign}${ema20}) desteğini test etti ve RSI (${rsi14}) dengeli bölgede. 1-14 gün için yukarı yönlü trend devamı bekleniyor.`,
+        score: finalScore,
+        technicalScore,
+        catalystScore: catScore,
+        catalystSummary: catSummary,
+        activeCatalysts: catNews,
+        reason: `Hisse yükselen trendde 20 EMA (${currSign}${ema20}) desteğini test etti ve RSI (${rsi14}) dengeli bölgede.${catSummary ? ` [Haber Etkisi: ${catSummary}]` : ''}`,
         suggestedEntry: price,
         stopLoss,
         target1,
@@ -64,6 +74,8 @@ export function evaluateSignal(
       const potentialGainPct = Number((((target2 - price) / price) * 100).toFixed(2));
       const maxRiskPct = Number((((price - stopLoss) / price) * 100).toFixed(2));
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
+      const technicalScore = Math.min(96, Math.round(75 + (rvol > 1.2 ? 14 : 8) + (changePercent > 0.5 ? 6 : 2)));
+      const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
 
       return {
         id: `sig_${ticker}_${Date.now()}`,
@@ -75,8 +87,12 @@ export function evaluateSignal(
         strategy: 'BREAKOUT',
         strategyName: 'Yüksek Hacimli Kırılım (Breakout)',
         title: `${displayTicker} - 20 Günlük Zirve Kırılımı (RVOL: ${rvol}x)`,
-        score: Math.min(98, Math.round(75 + (rvol > 1.2 ? 14 : 8) + (changePercent > 0.5 ? 6 : 2))),
-        reason: `Hisse son 20 günün zirvesini (${currSign}${high20}) zorluyor/kırıyor (RVOL ${rvol}x). Momentum güçlü.`,
+        score: finalScore,
+        technicalScore,
+        catalystScore: catScore,
+        catalystSummary: catSummary,
+        activeCatalysts: catNews,
+        reason: `Hisse son 20 günün zirvesini (${currSign}${high20}) hacimli kırıyor (RVOL ${rvol}x).${catSummary ? ` [Haber Etkisi: ${catSummary}]` : ''}`,
         suggestedEntry: price,
         stopLoss,
         target1,
@@ -100,6 +116,8 @@ export function evaluateSignal(
       const potentialGainPct = Number((((target2 - price) / price) * 100).toFixed(2));
       const maxRiskPct = Number((((price - stopLoss) / price) * 100).toFixed(2));
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
+      const technicalScore = Math.min(92, Math.round(68 + (changePercent > 1.5 ? 12 : 6) + (rsi14 > 58 ? 8 : 4)));
+      const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
 
       return {
         id: `sig_${ticker}_${Date.now()}`,
@@ -111,8 +129,12 @@ export function evaluateSignal(
         strategy: 'MOMENTUM_TREND',
         strategyName: 'Güçlü Momentum & Trend Takibi',
         title: `${displayTicker} - 9/20 EMA Hızlı Trend Takibi`,
-        score: Math.min(92, Math.round(68 + (changePercent > 1.5 ? 12 : 6) + (rsi14 > 58 ? 8 : 4))),
-        reason: `Hisse 9 ve 20 günlük ortalamaların üzerinde güçlü yukarı ivmeye sahip (RSI ${rsi14}).`,
+        score: finalScore,
+        technicalScore,
+        catalystScore: catScore,
+        catalystSummary: catSummary,
+        activeCatalysts: catNews,
+        reason: `Hisse 9 ve 20 günlük ortalamaların üzerinde güçlü ivmeye sahip (RSI ${rsi14}).${catSummary ? ` [Haber Etkisi: ${catSummary}]` : ''}`,
         suggestedEntry: price,
         stopLoss,
         target1,
@@ -137,6 +159,8 @@ export function evaluateSignal(
       const potentialGainPct = Number((((target2 - price) / price) * 100).toFixed(2));
       const maxRiskPct = Number((((price - stopLoss) / price) * 100).toFixed(2));
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
+      const technicalScore = Math.min(90, Math.round(65 + (40 - rsi14) * 1.5));
+      const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
 
       return {
         id: `sig_${ticker}_${Date.now()}`,
@@ -148,8 +172,12 @@ export function evaluateSignal(
         strategy: 'OVERSOLD_BOUNCE',
         strategyName: 'Aşırı Satım Tepki Alımı (Mean Reversion)',
         title: `${displayTicker} - RSI ${rsi14} Aşırı Satım Bölgesinden Tepki`,
-        score: Math.min(90, Math.round(65 + (40 - rsi14) * 1.5)),
-        reason: `RSI göstergesi ${rsi14} seviyesinde aşırı satım bölgesinde ve dip seviyelerden toparlanma emareleri gösteriyor.`,
+        score: finalScore,
+        technicalScore,
+        catalystScore: catScore,
+        catalystSummary: catSummary,
+        activeCatalysts: catNews,
+        reason: `RSI (${rsi14}) aşırı satım bölgesinde ve dip seviyelerden toparlanma emareleri gösteriyor.${catSummary ? ` [Haber Etkisi: ${catSummary}]` : ''}`,
         suggestedEntry: price,
         stopLoss,
         target1,
