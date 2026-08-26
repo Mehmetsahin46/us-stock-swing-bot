@@ -80,13 +80,20 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
       }
 
       if (closed) {
+        // 💸 İŞLEM MALİYETİ: Binde 1.5 Komisyon + Binde 1.5 Slippage (Toplam Binde 3 / %0.30 Maliyet)
+        const entryFee = (pos.shares * pos.entryPrice) * 0.0015;
+        const exitFee = (pos.shares * exitPrice) * 0.0015;
+        const totalFee = Number((entryFee + exitFee).toFixed(2));
+
         pos.status = status;
         pos.exitDate = currentDate;
         pos.exitPrice = exitPrice;
         pos.exitReason = exitReason;
-        pos.realizedPnL = Number(((exitPrice - pos.entryPrice) * pos.shares).toFixed(2));
-        pos.realizedPnLPct = Number((((exitPrice - pos.entryPrice) / pos.entryPrice) * 100).toFixed(2));
-        cash += pos.shares * exitPrice;
+        const grossPnL = (exitPrice - pos.entryPrice) * pos.shares;
+        const netPnL = Number((grossPnL - totalFee).toFixed(2));
+        pos.realizedPnL = netPnL;
+        pos.realizedPnLPct = Number(((netPnL / (pos.entryPrice * pos.shares)) * 100).toFixed(2));
+        cash += (pos.shares * exitPrice) - exitFee;
         closedTrades.unshift(pos);
       } else {
         activePositions.push(pos);
@@ -131,7 +138,8 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
 
           if (shares > 0 && cash >= shares * signal.suggestedEntry) {
             const cost = shares * signal.suggestedEntry;
-            cash -= cost;
+            const entryFee = cost * 0.0015;
+            cash -= (cost + entryFee); // Giriş komisyonunu anında düş
 
             openPositions.push({
               id: `bt_${item.ticker}_${currentDate}`,
@@ -237,6 +245,15 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
   const benchmarkReturnPct = Number((((Math.pow(1 + benchmarkAnnualReturnPct / 100, periodYears)) - 1) * 100).toFixed(1));
   const alphaPct = Number((totalReturnPct - benchmarkReturnPct).toFixed(1));
 
+  // 📈 YILLIK BİLEŞİK GETİRİ (CAGR) HESAPLAMASI
+  const cagrPct = totalEquity > 0 && initialBalance > 0
+    ? Number(((Math.pow(totalEquity / initialBalance, 1 / periodYears) - 1) * 100).toFixed(1))
+    : 0;
+
+  // 💸 TOPLAM ÖDENEN KOMİSYON VE KAYMA MALİYETİ
+  const totalCommissionsPaid = Number((closedTrades.reduce((sum, t) => sum + ((t.shares * t.entryPrice + t.shares * (t.exitPrice || t.entryPrice)) * 0.0015), 0)).toFixed(2));
+  const commissionImpactPct = Number(((totalCommissionsPaid / initialBalance) * 100).toFixed(1));
+
   const avgTradeDays = totalTrades > 0
     ? Number((closedTrades.reduce((sum, t) => sum + t.daysHeld, 0) / totalTrades).toFixed(1))
     : 0;
@@ -278,7 +295,10 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
       initialCapital: initialBalance,
       finalCapital: totalEquity,
       totalReturnPct,
+      cagrPct,
       totalTrades,
+      totalCommissionsPaid,
+      commissionImpactPct,
       winRate,
       winningTrades: winningTrades.length,
       losingTrades: losingTrades.length,

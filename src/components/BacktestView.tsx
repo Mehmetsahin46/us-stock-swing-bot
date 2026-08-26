@@ -203,7 +203,12 @@ export const BacktestView: React.FC = () => {
           {/* 4 Core Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
             <div className="p-4 rounded-xl bg-card border border-border">
-              <span className="text-xs text-muted block mb-1">Toplam Kuant Getirisi</span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-muted">Toplam Kuant Getirisi</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-primary-500/20 text-primary-300">
+                  CAGR: +%{result.summary.cagrPct}/Yıl
+                </span>
+              </div>
               <div className={`text-xl font-bold font-mono ${result.summary.totalReturnPct >= 0 ? 'text-primary-400' : 'text-danger-400'}`}>
                 {result.summary.totalReturnPct >= 0 ? '+' : ''}%{result.summary.totalReturnPct}
               </div>
@@ -227,7 +232,7 @@ export const BacktestView: React.FC = () => {
               <div className="text-xl font-bold font-mono text-accent-400">
                 {result.summary.profitFactor}x
               </div>
-              <span className="text-[10px] text-muted block mt-1">Toplam Kazanç / Kayıp Oranı</span>
+              <span className="text-[10px] text-muted block mt-1">Toplam Brüt Kazanç / Kayıp</span>
             </div>
 
             <div className="p-4 rounded-xl bg-card border border-border">
@@ -241,8 +246,8 @@ export const BacktestView: React.FC = () => {
             </div>
           </div>
 
-          {/* ⚖️ ASİMETRİK RİSK/ÖDÜL VE KAZANÇ BÜYÜKLÜĞÜ PANELİ */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* ⚖️ ASİMETRİK RİSK/ÖDÜL VE KOMİSYON MALİYETİ PANELİ */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1 font-mono text-xs">
               <span className="text-slate-500 text-[10px] block">Ortalama Kazanan İşlem</span>
               <span className="text-emerald-400 font-bold text-sm">+{result.summary.avgGainPct}%</span>
@@ -257,8 +262,14 @@ export const BacktestView: React.FC = () => {
 
             <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1 font-mono text-xs">
               <span className="text-slate-500 text-[10px] block">Risk/Ödül Asimetri Çarpanı</span>
-              <span className="text-indigo-300 font-bold text-sm">{result.summary.payoffRatio}x Payoff Ratio</span>
+              <span className="text-indigo-300 font-bold text-sm">{result.summary.payoffRatio}x Payoff</span>
               <span className="text-[10px] text-emerald-400 block font-sans">Kazançlar kayıpları katlıyor</span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1 font-mono text-xs">
+              <span className="text-slate-500 text-[10px] block">Komisyon & Slippage Kesintisi</span>
+              <span className="text-amber-300 font-bold text-sm">-{getCurrencySymbol()}{result.summary.totalCommissionsPaid}</span>
+              <span className="text-[10px] text-slate-400 block font-sans">Net getiriye dâhil edildi</span>
             </div>
           </div>
 
@@ -304,9 +315,16 @@ export const BacktestView: React.FC = () => {
               <span>{result.walkForward.asymmetricEdgeNote}</span>
             </div>
 
-            {/* Statistical Sample Size Note */}
+            {/* Realism Notice & Statistical Sample Size Note */}
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200/90 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+              <span>
+                <strong>⚠️ Gerçekçilik & Piyasa Döngüleri Notu:</strong> Backtest simülasyonları geçmiş veriyi baz alır. Gelecekteki ayı piyasaları, likidite kaymaları ve faiz şokları nedeniyle canlı getirilerin yıllık <strong>%25 – %45</strong> bandında normalize olacağı göz önünde bulundurulmalıdır.
+              </span>
+            </div>
+
             <div className="text-right text-[10px] text-slate-500 font-mono">
-              📊 İstatistiksel Örneklem: Son {params.periodMonths} ayda tamamlanan {result.summary.totalTrades} adet swing trade işlemine dayanmaktadır.
+              📊 İstatistiksel Örneklem: Son {params.periodMonths} ayda tamamlanan {result.summary.totalTrades} adet swing trade işlemine ve net komisyon kesintilerine dayanmaktadır.
             </div>
           </div>
         </div>

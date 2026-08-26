@@ -222,7 +222,10 @@ export interface BacktestResult {
     initialCapital: number;
     finalCapital: number;
     totalReturnPct: number;
+    cagrPct: number; // Yıllık Bileşik Büyüme Oranı (Compound Annual Growth Rate)
     totalTrades: number;
+    totalCommissionsPaid: number; // Toplam Komisyon + Slippage Maliyeti
+    commissionImpactPct: number; // Komisyonun getiriye etkisi %
     winRate: number;
     winningTrades: number;
     losingTrades: number;
