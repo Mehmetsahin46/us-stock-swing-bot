@@ -14,6 +14,7 @@ interface HeaderProps {
   onOpenHealth?: () => void;
   onOpenDailyReport?: () => void;
   onOpenNotifRules?: () => void;
+  onOpenSecurity?: () => void;
   lastScanTime: string | null;
   activeMarket: MarketType;
   onSelectMarket: (m: MarketType) => void;
@@ -34,6 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenHealth,
   onOpenDailyReport,
   onOpenNotifRules,
+  onOpenSecurity,
   lastScanTime,
   activeMarket,
   onSelectMarket,
@@ -196,6 +198,17 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
             <span className="hidden sm:inline">Uygulama İndir</span>
+          </button>
+        )}
+
+        {onOpenSecurity && (
+          <button
+            onClick={onOpenSecurity}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition-all cursor-pointer shadow-sm"
+            title="Siber Güvenlik, Karantina & Kill Switch Merkezi"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden md:inline">Güvenlik Kalkanı</span>
           </button>
         )}
 

@@ -1,5 +1,7 @@
 import { Candle, CurrencyType, MarketType, SectorType, Signal, SignalGrade, StockNewsItem, StrategyType, TechnicalIndicators } from './types';
 import { calculateSignalGrade, calculateExpectedValue } from './quantEngine';
+import { validateMarketDataIntegrity } from './dataIntegrityEngine';
+import { generateSignalSnapshotAndHash } from './configSecurity';
 
 function calculateEstimatedTimeframe(targetPrice: number, currentPrice: number, atr14: number, rvol: number): { estimatedDays: number; estimatedTimeframe: string } {
   const distance = Math.max(0.1, targetPrice - currentPrice);
@@ -33,6 +35,13 @@ export function evaluateSignal(
   const { price, ema9, ema20, ema50, rsi14, atr14, rvol, high20, changePercent } = tech;
   const currSign = currency === 'TRY' ? '₺' : '$';
 
+  // 🛡️ 31. MARKET DATA INTEGRITY & MANIPULATION FILTER (FAIL-SAFE)
+  const integrity = validateMarketDataIntegrity(ticker, candles, tech);
+  if (!integrity.isValid || integrity.isBlocked) {
+    // Şüpheli/manipüle veri -> SİNYAL YOK (FAIL SAFE)
+    return null;
+  }
+
   let catScore = catalystInfo ? catalystInfo.catalystScore : 0;
   let catSummary = catalystInfo ? catalystInfo.catalystSummary : undefined;
   const catNews = catalystInfo ? catalystInfo.news : undefined;
@@ -48,6 +57,8 @@ export function evaluateSignal(
   if (price < ema50 && catScore < 0) {
     return null;
   }
+
+  let baseSignal: Signal | null = null;
 
   // 1. STRATEGY: EMA 20 Pullback (Trend Desteği)
   const isUptrend = price >= ema50 * 0.98 || ema20 > ema50 * 0.98;
@@ -69,7 +80,7 @@ export function evaluateSignal(
       const expectedValuePct = calculateExpectedValue(75, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
-      return {
+      baseSignal = {
         id: `sig_${ticker}_${Date.now()}`,
         ticker,
         displayTicker,
@@ -94,6 +105,8 @@ export function evaluateSignal(
         potentialGainPct,
         maxRiskPct,
         expectedValuePct,
+        dataConfidenceScore: integrity.dataConfidenceScore,
+        dataConfidenceStatus: integrity.dataConfidenceStatus,
         estimatedDays,
         estimatedTimeframe,
         timestamp: new Date().toISOString()
@@ -102,10 +115,7 @@ export function evaluateSignal(
   }
 
   // 2. STRATEGY: High-Volume Breakout (Zirve / Direnç Kırılımı)
-  const isBreakout = price >= high20 * 0.985 && rvol >= 1.05 && price >= ema20;
-  const isMomentumRSI = rsi14 >= 50 && rsi14 <= 74;
-
-  if (isBreakout && isMomentumRSI) {
+  else if (price >= high20 * 0.985 && rvol >= 1.05 && price >= ema20 && rsi14 >= 50 && rsi14 <= 74) {
     const stopLoss = Number((price - 1.6 * atr14).toFixed(2));
     const risk = price - stopLoss;
     if (risk > 0) {
@@ -120,7 +130,7 @@ export function evaluateSignal(
       const expectedValuePct = calculateExpectedValue(72, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
-      return {
+      baseSignal = {
         id: `sig_${ticker}_${Date.now()}`,
         ticker,
         displayTicker,
@@ -145,6 +155,8 @@ export function evaluateSignal(
         potentialGainPct,
         maxRiskPct,
         expectedValuePct,
+        dataConfidenceScore: integrity.dataConfidenceScore,
+        dataConfidenceStatus: integrity.dataConfidenceStatus,
         estimatedDays,
         estimatedTimeframe,
         timestamp: new Date().toISOString()
@@ -152,9 +164,8 @@ export function evaluateSignal(
     }
   }
 
-  // 3. STRATEGY: Momentum Trend (Güçlü Yükseliş Kanalı)
-  const isStrongTrend = price > ema9 && ema9 > ema20 && rsi14 >= 52 && rsi14 <= 72 && changePercent >= 0.3;
-  if (isStrongTrend) {
+  // 3. STRATEGY: Momentum Trend
+  else if (price > ema9 && ema9 > ema20 && rsi14 >= 52 && rsi14 <= 72 && changePercent >= 0.3) {
     const stopLoss = Number((Math.min(ema20, price - 1.3 * atr14)).toFixed(2));
     const risk = price - stopLoss;
     if (risk > 0) {
@@ -169,7 +180,7 @@ export function evaluateSignal(
       const expectedValuePct = calculateExpectedValue(70, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
-      return {
+      baseSignal = {
         id: `sig_${ticker}_${Date.now()}`,
         ticker,
         displayTicker,
@@ -194,6 +205,8 @@ export function evaluateSignal(
         potentialGainPct,
         maxRiskPct,
         expectedValuePct,
+        dataConfidenceScore: integrity.dataConfidenceScore,
+        dataConfidenceStatus: integrity.dataConfidenceStatus,
         estimatedDays,
         estimatedTimeframe,
         timestamp: new Date().toISOString()
@@ -201,10 +214,8 @@ export function evaluateSignal(
     }
   }
 
-  // 4. STRATEGY: Oversold Mean Reversion (Dip Tepkisi)
-  const isOversold = rsi14 <= 38 && (changePercent >= -0.5 || (candles.length > 2 && price >= candles[candles.length - 2].low * 0.99));
-
-  if (isOversold) {
+  // 4. STRATEGY: Oversold Bounce
+  else if (rsi14 <= 38 && (changePercent >= -0.5 || (candles.length > 2 && price >= candles[candles.length - 2].low * 0.99))) {
     const stopLoss = Number((price - 1.3 * atr14).toFixed(2));
     const risk = price - stopLoss;
     if (risk > 0) {
@@ -219,7 +230,7 @@ export function evaluateSignal(
       const expectedValuePct = calculateExpectedValue(68, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
-      return {
+      baseSignal = {
         id: `sig_${ticker}_${Date.now()}`,
         ticker,
         displayTicker,
@@ -244,6 +255,8 @@ export function evaluateSignal(
         potentialGainPct,
         maxRiskPct,
         expectedValuePct,
+        dataConfidenceScore: integrity.dataConfidenceScore,
+        dataConfidenceStatus: integrity.dataConfidenceStatus,
         estimatedDays,
         estimatedTimeframe,
         timestamp: new Date().toISOString()
@@ -251,5 +264,11 @@ export function evaluateSignal(
     }
   }
 
-  return null;
+  // 🧱 33. IMMUTABLE SNAPSHOT & SHA-256 INTEGRITY HASH
+  if (baseSignal) {
+    const { integrityHash } = generateSignalSnapshotAndHash(baseSignal, tech, catNews, integrity.dataConfidenceScore);
+    baseSignal.integrityHash = integrityHash;
+  }
+
+  return baseSignal;
 }

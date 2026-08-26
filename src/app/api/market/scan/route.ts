@@ -11,15 +11,38 @@ export async function GET(request: NextRequest) {
     const marketFilter = ['US', 'BIST'].includes(marketParam) ? marketParam : 'ALL';
 
     const results = await scanUniverse(marketFilter);
-    const signals = results.filter(r => r.signal !== null);
+    const rawSignals = results.map(r => r.signal).filter((s): s is NonNullable<typeof s> => s !== null);
+
+    // 🚨 32 & 34. SIGNAL SECURITY, ANOMALY & QUARANTINE FILTER
+    const { filterAndQuarantineSignals } = await import('@/lib/signalSecurityEngine');
+    const { approvedSignals, quarantinedSignals, anomalyDetected, alertMessage } = filterAndQuarantineSignals(rawSignals);
+
+    // If anomaly or quarantine, strip unapproved signals from public results
+    const approvedTickerSet = new Set(approvedSignals.map(s => s.ticker));
+    const sanitizedResults = results.map(r => {
+      if (r.signal && !approvedTickerSet.has(r.signal.ticker)) {
+        return {
+          ...r,
+          signal: {
+            ...r.signal,
+            isQuarantined: true,
+            title: `🟡 SIGNAL UNDER VALIDATION: ${r.signal.displayTicker} (Karantinada)`
+          }
+        };
+      }
+      return r;
+    });
 
     return NextResponse.json({
       success: true,
       market: marketFilter,
       timestamp: new Date().toISOString(),
-      totalScanned: results.length,
-      signalsFound: signals.length,
-      data: results
+      totalScanned: sanitizedResults.length,
+      signalsFound: approvedSignals.length,
+      quarantinedCount: quarantinedSignals.length,
+      anomalyDetected,
+      alertMessage,
+      results: sanitizedResults
     });
   } catch (error) {
     console.error('Scan API error:', error);

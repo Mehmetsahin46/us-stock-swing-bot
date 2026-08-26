@@ -111,6 +111,10 @@ export interface Signal {
   maxRiskPct: number;
   expectedValuePct?: number; // Expected Value EV%
   relativeStrength?: number; // RS relative to market
+  dataConfidenceScore?: number; // 0 - 100% (Veri Güvenilirliği)
+  dataConfidenceStatus?: 'HIGH' | 'MEDIUM' | 'LOW';
+  integrityHash?: string; // SHA-256 Signal Snapshot Hash
+  isQuarantined?: boolean; // Signal Under Validation
   estimatedDays?: number;
   estimatedTimeframe?: string;
   timestamp: string;

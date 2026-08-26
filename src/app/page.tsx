@@ -20,6 +20,7 @@ import { WatchlistView } from '@/components/WatchlistView';
 import { SystemHealthModal } from '@/components/SystemHealthModal';
 import { DailyReportModal } from '@/components/DailyReportModal';
 import { NotificationRulesModal } from '@/components/NotificationRulesModal';
+import { SecurityCenterModal } from '@/components/SecurityCenterModal';
 import { 
   DualPortfolioState, 
   MarketPortfolio,
@@ -70,6 +71,7 @@ export default function HomePage() {
   const [healthModalOpen, setHealthModalOpen] = useState<boolean>(false);
   const [dailyReportModalOpen, setDailyReportModalOpen] = useState<boolean>(false);
   const [notifRulesModalOpen, setNotifRulesModalOpen] = useState<boolean>(false);
+  const [securityModalOpen, setSecurityModalOpen] = useState<boolean>(false);
 
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null);
   const [selectedResult, setSelectedResult] = useState<StockScanResult | null>(null);
@@ -289,6 +291,7 @@ export default function HomePage() {
         onOpenHealth={() => setHealthModalOpen(true)}
         onOpenDailyReport={() => setDailyReportModalOpen(true)}
         onOpenNotifRules={() => setNotifRulesModalOpen(true)}
+        onOpenSecurity={() => setSecurityModalOpen(true)}
         lastScanTime={dualState.lastScanTime}
         activeMarket={activeMarket}
         onSelectMarket={setActiveMarket}
@@ -589,6 +592,11 @@ export default function HomePage() {
       <NotificationRulesModal
         isOpen={notifRulesModalOpen}
         onClose={() => setNotifRulesModalOpen(false)}
+      />
+
+      <SecurityCenterModal
+        isOpen={securityModalOpen}
+        onClose={() => setSecurityModalOpen(false)}
       />
     </div>
   );
