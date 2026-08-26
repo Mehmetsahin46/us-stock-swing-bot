@@ -232,10 +232,17 @@ export interface BacktestResult {
     profitFactor: number;
     maxDrawdownPct: number;
     indexMaxDrawdownPct: number; // Endeksin yaşadığı max drawdown %
+    maxConsecutiveLosses: number; // En uzun ardışık zarar serisi
+    maxConsecutiveWins: number; // En uzun ardışık kazanç serisi
     avgTradeDays: number;
     avgGainPct: number;
     avgLossPct: number;
     payoffRatio: number; // Ortalama Kazanç / Ortalama Kayıp Oranı (Asimetrik Getiri)
+  };
+  regimePerformance: {
+    bull: { winRate: number; avgReturnPct: number; description: string };
+    sideways: { winRate: number; avgReturnPct: number; description: string };
+    bear: { winRate: number; avgReturnPct: number; description: string };
   };
   walkForward: {
     inSampleWinRate: number;

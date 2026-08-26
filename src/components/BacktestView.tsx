@@ -246,32 +246,89 @@ export const BacktestView: React.FC = () => {
             </div>
           </div>
 
-          {/* ⚖️ ASİMETRİK RİSK/ÖDÜL VE KOMİSYON MALİYETİ PANELİ */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          {/* ⚖️ ASİMETRİK RİSK/ÖDÜL, ARDIŞIK SERİ VE KOMİSYON PANELİ */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1 font-mono text-xs">
-              <span className="text-slate-500 text-[10px] block">Ortalama Kazanan İşlem</span>
+              <span className="text-slate-500 text-[10px] block">Ort. Kazanan İşlem</span>
               <span className="text-emerald-400 font-bold text-sm">+{result.summary.avgGainPct}%</span>
               <span className="text-[10px] text-slate-400 block font-sans">Hedefe giden kârlı işlemler</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1 font-mono text-xs">
-              <span className="text-slate-500 text-[10px] block">Ortalama Kaybeden İşlem</span>
+              <span className="text-slate-500 text-[10px] block">Ort. Kaybeden İşlem</span>
               <span className="text-danger-400 font-bold text-sm">-%{result.summary.avgLossPct}%</span>
               <span className="text-[10px] text-slate-400 block font-sans">Stop-loss ile kesilen işlemler</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1 font-mono text-xs">
-              <span className="text-slate-500 text-[10px] block">Risk/Ödül Asimetri Çarpanı</span>
-              <span className="text-indigo-300 font-bold text-sm">{result.summary.payoffRatio}x Payoff</span>
-              <span className="text-[10px] text-emerald-400 block font-sans">Kazançlar kayıpları katlıyor</span>
+              <span className="text-slate-500 text-[10px] block">Maks Ardışık Kayıp</span>
+              <span className="text-amber-400 font-bold text-sm">{result.summary.maxConsecutiveLosses} İşlem</span>
+              <span className="text-[10px] text-slate-400 block font-sans">En kötü seride art arda stop</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1 font-mono text-xs">
-              <span className="text-slate-500 text-[10px] block">Komisyon & Slippage Kesintisi</span>
+              <span className="text-slate-500 text-[10px] block">Komisyon & Slippage</span>
               <span className="text-amber-300 font-bold text-sm">-{getCurrencySymbol()}{result.summary.totalCommissionsPaid}</span>
               <span className="text-[10px] text-slate-400 block font-sans">Net getiriye dâhil edildi</span>
             </div>
           </div>
+
+          {/* 🐂 🦀 🐻 PİYASA REJİMLERİNE GÖRE PERFORMANS KIRILIMI */}
+          {result.regimePerformance && (
+            <div className="p-4 rounded-2xl bg-card border border-border space-y-3">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Scale className="w-4 h-4 text-indigo-400" />
+                <span>Piyasa Rejimlerine Göre Performans Kırılımı (Market Regime Breakdown)</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white flex items-center gap-1">
+                      <span>🐂</span> <span>Boğa Trendi (Bull)</span>
+                    </span>
+                    <span className="font-mono font-bold text-emerald-400">%{result.regimePerformance.bull.winRate} Win</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-emerald-300 font-bold block">
+                    Ort. İşlem Getirisi: +%{result.regimePerformance.bull.avgReturnPct}
+                  </span>
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    {result.regimePerformance.bull.description}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white flex items-center gap-1">
+                      <span>🦀</span> <span>Yatay / Testere (Chop)</span>
+                    </span>
+                    <span className="font-mono font-bold text-slate-300">%{result.regimePerformance.sideways.winRate} Win</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-indigo-300 font-bold block">
+                    Ort. İşlem Getirisi: +%{result.regimePerformance.sideways.avgReturnPct}
+                  </span>
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    {result.regimePerformance.sideways.description}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white flex items-center gap-1">
+                      <span>🐻</span> <span>Ayı Piyasası (Bear)</span>
+                    </span>
+                    <span className="font-mono font-bold text-danger-400">%{result.regimePerformance.bear.winRate} Win</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-danger-400 font-bold block">
+                    Ort. İşlem Getirisi: {result.regimePerformance.bear.avgReturnPct}%
+                  </span>
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    {result.regimePerformance.bear.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 🔬 DİNAMİK WALK-FORWARD & KALİBRASYON ANALİZİ PANELİ */}
           <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 shadow-xl space-y-3">
@@ -318,13 +375,16 @@ export const BacktestView: React.FC = () => {
             {/* Realism Notice & Statistical Sample Size Note */}
             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200/90 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-              <span>
-                <strong>⚠️ Gerçekçilik & Piyasa Döngüleri Notu:</strong> Backtest simülasyonları geçmiş veriyi baz alır. Gelecekteki ayı piyasaları, likidite kaymaları ve faiz şokları nedeniyle canlı getirilerin yıllık <strong>%25 – %45</strong> bandında normalize olacağı göz önünde bulundurulmalıdır.
-              </span>
+              <div className="space-y-1">
+                <span>
+                  <strong>⚠️ Gerçekçilik & Normalizasyon Notu:</strong> Yukarıdaki getiriler <em>Brüt (Vergi / Stopaj Öncesi)</em> hesaplanmıştır. Out-of-Sample dönem verimliliği (WFE), komisyon/slippage maliyetleri ve geçmiş ayı piyasası döngüleri baz alındığında, canlı piyasada sürdürülebilir getirilerin yıllık <strong>%25 – %45</strong> bandında normalize olacağı öngörülmektedir.
+                </span>
+              </div>
             </div>
 
-            <div className="text-right text-[10px] text-slate-500 font-mono">
-              📊 İstatistiksel Örneklem: Son {params.periodMonths} ayda tamamlanan {result.summary.totalTrades} adet swing trade işlemine ve net komisyon kesintilerine dayanmaktadır.
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500 font-mono pt-1">
+              <span>📌 Vergi Notu: Stopaj ve şahsi gelir vergisi beyanları yatırımcının kendi vergi dilimine göre düşülmelidir.</span>
+              <span>📊 İstatistiksel Örneklem: Son {params.periodMonths} ayda tamamlanan {result.summary.totalTrades} adet swing trade işlemine dayanmaktadır.</span>
             </div>
           </div>
         </div>
