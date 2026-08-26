@@ -26,6 +26,7 @@ import {
 import { INITIAL_DUAL_STATE } from '@/lib/constants';
 import { mergeDualStates } from '@/lib/stateSync';
 import { sendLocalNotification } from '@/lib/notificationManager';
+import { isBISTOpen, isUSOpen } from '@/lib/marketHours';
 import { LayoutDashboard, Radio, History, PlayCircle, ShieldCheck, Bell, ShieldAlert, Plus, Newspaper } from 'lucide-react';
 
 const STORAGE_KEY = 'dual_market_swing_portfolio_v7_supabase';
@@ -126,8 +127,12 @@ export default function HomePage() {
 
   useEffect(() => {
     handleScanMarket();
-    // ⚡ Ultra-fast 30-second live market scan & sync
-    const interval = setInterval(handleScanMarket, 30000);
+    // ⚡ Sadece borsa seans saatlerinde 30 saniyede bir otomatik tara
+    const interval = setInterval(() => {
+      if (isBISTOpen() || isUSOpen()) {
+        handleScanMarket();
+      }
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 

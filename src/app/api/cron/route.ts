@@ -14,8 +14,21 @@ export async function GET() {
   const logs: string[] = [];
 
   try {
-    const dualState = await getDualPortfolioState();
+    const bistOpen = isBISTOpen();
+    const usOpen = isUSOpen();
     const marketStatus = getMarketStatus();
+
+    // 🛡️ Akıllı Uyku Modu: Piyasalar kapalıyken (gece/haftasonu) gereksiz tarama yapma, kaynakları koru!
+    if (!bistOpen && !usOpen) {
+      return NextResponse.json({
+        success: true,
+        sleeping: true,
+        message: '💤 Piyasalar kapalı (BIST: 10:00-18:00, ABD: 16:30-23:00). Bot uyku modunda, işlem yapılmadı.',
+        timestamp: startTime
+      });
+    }
+
+    const dualState = await getDualPortfolioState();
     logs.push(marketStatus.message);
 
     const bistRegime = await fetchMarketRegime('BIST');
@@ -23,7 +36,9 @@ export async function GET() {
     dualState.bistRegime = bistRegime;
     dualState.usRegime = usRegime;
 
-    const scanResults = await scanUniverse('ALL');
+    // Sadece açık olan piyasanın hisselerini tara!
+    const marketFilter = bistOpen && usOpen ? 'ALL' : bistOpen ? 'BIST' : 'US';
+    const scanResults = await scanUniverse(marketFilter);
     dualState.lastScanTime = startTime;
     dualState.lastCronTime = startTime;
 
@@ -49,7 +64,6 @@ export async function GET() {
     }
 
     // Auto-Trade for BIST (Only when BIST market is actually open: 10:00 - 18:00 Istanbul time)
-    const bistOpen = isBISTOpen();
     if (dualState.bist.autoTrade && bistOpen) {
       const bistSignals: Signal[] = scanResults
         .filter(r => r.market === 'BIST' && r.signal !== null && r.signal.score >= 70 && r.signal.riskReward >= 1.5)
@@ -76,7 +90,6 @@ export async function GET() {
     }
 
     // Auto-Trade for US (Only when US market is actually open: 09:30 - 16:00 NY time / 16:30 - 23:00 TSI)
-    const usOpen = isUSOpen();
     if (dualState.us.autoTrade && usOpen) {
       const usSignals: Signal[] = scanResults
         .filter(r => r.market === 'US' && r.signal !== null && r.signal.score >= 70 && r.signal.riskReward >= 1.5)
