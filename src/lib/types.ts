@@ -229,6 +229,15 @@ export interface BacktestResult {
     avgGainPct: number;
     avgLossPct: number;
   };
+  walkForward: {
+    inSampleWinRate: number;
+    inSampleProfitFactor: number;
+    outSampleWinRate: number;
+    outSampleProfitFactor: number;
+    wfePct: number; // Walk Forward Efficiency %
+    status: 'MÜKEMMEL (ROBUST)' | 'GÜÇLÜ' | 'AŞIRI UYARLAMA RİSKİ';
+    validationVerdict: string;
+  };
   equityCurve: { date: string; equity: number }[];
   trades: TradePosition[];
 }

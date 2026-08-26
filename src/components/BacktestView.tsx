@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { BacktestParams, BacktestResult } from '@/lib/types';
-import { PlayCircle, TrendingUp, AlertTriangle, CheckCircle2, RefreshCw, BarChart2, ShieldCheck, Microscope, Layers } from 'lucide-react';
+import { PlayCircle, TrendingUp, AlertTriangle, CheckCircle2, RefreshCw, BarChart2, ShieldCheck, Microscope, Layers, Info, DollarSign } from 'lucide-react';
 
 export const BacktestView: React.FC = () => {
   const [params, setParams] = useState<BacktestParams>({
@@ -16,6 +16,18 @@ export const BacktestView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const getCurrencyLabel = () => {
+    if (params.market === 'BIST') return '₺ (TRY)';
+    if (params.market === 'US') return '$ (USD)';
+    return '₺ / $ (Normalize)';
+  };
+
+  const getCurrencySymbol = () => {
+    if (params.market === 'BIST') return '₺';
+    if (params.market === 'US') return '$';
+    return '';
+  };
 
   async function handleRunBacktest() {
     setLoading(true);
@@ -43,7 +55,7 @@ export const BacktestView: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       {/* Configuration Card */}
       <div className="p-5 rounded-2xl bg-card border border-border space-y-4 shadow-lg">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <PlayCircle className="w-5 h-5 text-accent-400" />
             <h2 className="text-sm sm:text-base font-extrabold text-white">
@@ -51,12 +63,12 @@ export const BacktestView: React.FC = () => {
             </h2>
           </div>
           <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-accent-500/10 border border-accent-500/20 text-accent-400 font-semibold">
-            3-5 Yıllık Gerçek Fiyat Verisi
+            Gerçek Geçmiş Fiyat Verisi
           </span>
         </div>
 
         <p className="text-xs text-slate-400">
-          Stratejilerin geçmiş borsa döngülerindeki getirisini, maksimum düşüşünü ve <strong>Walk-Forward aşırı uyarlama (Overfitting)</strong> direncini test edin.
+          Stratejilerin geçmiş borsa döngülerindeki kâr/zarar performansını, işlem sayılarını ve <strong>Walk-Forward aşırı uyarlama (Overfitting)</strong> direncini test edin.
         </p>
 
         {/* Inputs Grid */}
@@ -69,8 +81,8 @@ export const BacktestView: React.FC = () => {
               className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-accent-500"
             >
               <option value="ALL">Tümü (BIST + ABD)</option>
-              <option value="BIST">Sadece BIST</option>
-              <option value="US">Sadece ABD</option>
+              <option value="BIST">Sadece 🇹🇷 BIST</option>
+              <option value="US">Sadece 🇺🇸 ABD</option>
             </select>
           </div>
 
@@ -90,13 +102,21 @@ export const BacktestView: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-slate-400 mb-1">Başlangıç Sermayesi</label>
-            <input
-              type="number"
-              value={params.initialBalance}
-              onChange={e => setParams(p => ({ ...p, initialBalance: Number(e.target.value) }))}
-              className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-accent-500"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-slate-400">Başlangıç Sermayesi</label>
+              <span className="text-[10px] font-mono text-accent-400 font-bold">{getCurrencyLabel()}</span>
+            </div>
+            <div className="relative">
+              <input
+                type="number"
+                value={params.initialBalance}
+                onChange={e => setParams(p => ({ ...p, initialBalance: Number(e.target.value) }))}
+                className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-accent-500 pr-10"
+              />
+              <span className="absolute right-3 top-2.5 text-xs text-slate-500 font-bold pointer-events-none">
+                {getCurrencySymbol()}
+              </span>
+            </div>
           </div>
 
           <div>
@@ -109,6 +129,14 @@ export const BacktestView: React.FC = () => {
               className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-accent-500"
             />
           </div>
+        </div>
+
+        {/* Currency Note Banner */}
+        <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center gap-2 text-[11px] text-slate-400">
+          <Info className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+          <span>
+            Seçili Para Birimi: <strong className="text-white">{getCurrencyLabel()}</strong>. {params.market === 'ALL' ? 'Tüm pazarlar seçildiğinde sermaye ve getiri birleşik sanal portföy üzerinden normalize hesaplanır.' : ''}
+          </span>
         </div>
 
         {/* Run Button */}
@@ -131,18 +159,31 @@ export const BacktestView: React.FC = () => {
         </div>
       )}
 
-      {/* Results Section */}
+      {/* Empty State when no test is run yet */}
+      {!result && !loading && (
+        <div className="p-10 rounded-2xl bg-card border border-border text-center space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 mx-auto">
+            <BarChart2 className="w-6 h-6" />
+          </div>
+          <h3 className="text-sm font-bold text-white">Henüz Bir Simülasyon Çalıştırılmadı</h3>
+          <p className="text-xs text-slate-400 max-w-md mx-auto">
+            Yukarıdan test etmek istediğiniz pazarı, geçmiş zaman dilimini ve başlangıç bakiyenizi seçip <strong>"Testi Başlat & Doğrula"</strong> butonuna tıklayın.
+          </p>
+        </div>
+      )}
+
+      {/* Results Section (Only rendered when result exists) */}
       {result && (
         <div className="space-y-6">
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
             <div className="p-4 rounded-xl bg-card border border-border">
               <span className="text-xs text-muted block mb-1">Toplam Kuant Getirisi</span>
-              <div className="text-xl font-bold font-mono text-primary-400">
-                +%{result.summary.totalReturnPct}
+              <div className={`text-xl font-bold font-mono ${result.summary.totalReturnPct >= 0 ? 'text-primary-400' : 'text-danger-400'}`}>
+                {result.summary.totalReturnPct >= 0 ? '+' : ''}%{result.summary.totalReturnPct}
               </div>
               <span className="text-[10px] text-muted block mt-1 font-mono">
-                {result.summary.initialCapital.toLocaleString()} ➔ {result.summary.finalCapital.toLocaleString()}
+                {getCurrencySymbol()}{result.summary.initialCapital.toLocaleString()} ➔ {getCurrencySymbol()}{result.summary.finalCapital.toLocaleString()}
               </span>
             </div>
 
@@ -152,7 +193,7 @@ export const BacktestView: React.FC = () => {
                 %{result.summary.winRate}
               </div>
               <span className="text-[10px] text-muted block mt-1">
-                {result.summary.winningTrades} Kazanç / {result.summary.losingTrades} Kayıp
+                {result.summary.winningTrades} Kazanç / {result.summary.losingTrades} Kayıp (Toplam {result.summary.totalTrades} İşlem)
               </span>
             </div>
 
@@ -169,37 +210,43 @@ export const BacktestView: React.FC = () => {
               <div className="text-xl font-bold font-mono text-danger-400">
                 -%{result.summary.maxDrawdownPct}
               </div>
-              <span className="text-[10px] text-muted block mt-1">En Yüksekten Maks Düşüş</span>
+              <span className="text-[10px] text-muted block mt-1">Zirveden Maks Düşüş</span>
             </div>
           </div>
 
-          {/* 🔬 WALK-FORWARD & KALİBRASYON ANALİZİ PANELİ */}
+          {/* 🔬 DİNAMİK WALK-FORWARD & KALİBRASYON ANALİZİ PANELİ */}
           <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                 <Microscope className="w-4 h-4 text-indigo-400" />
                 <span>Walk-Forward Doğrulama & Aşırı Uyarlama (Overfitting) Raporu</span>
               </h3>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                Doğrulama: BAŞARILI (Robust)
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                result.walkForward.status === 'MÜKEMMEL (ROBUST)'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : result.walkForward.status === 'GÜÇLÜ'
+                  ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                  : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+              }`}>
+                Doğrulama: {result.walkForward.status}
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-                <span className="text-slate-500 text-[10px] block">In-Sample (Eğitim) Başarısı</span>
-                <span className="text-white font-bold font-mono text-sm">%81.4 Win Rate</span>
-                <span className="text-[10px] text-slate-400 block">3.65x Profit Factor</span>
+                <span className="text-slate-500 text-[10px] block">In-Sample (%70 Eğitim Dönemi)</span>
+                <span className="text-white font-bold font-mono text-sm">%{result.walkForward.inSampleWinRate} Win Rate</span>
+                <span className="text-[10px] text-slate-400 block">{result.walkForward.inSampleProfitFactor}x Profit Factor</span>
               </div>
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-                <span className="text-slate-500 text-[10px] block">Out-of-Sample (Canlı Test)</span>
-                <span className="text-emerald-400 font-bold font-mono text-sm">%78.2 Win Rate</span>
-                <span className="text-[10px] text-slate-400 block">3.20x Profit Factor</span>
+                <span className="text-slate-500 text-[10px] block">Out-of-Sample (%30 Canlı Doğrulama)</span>
+                <span className="text-emerald-400 font-bold font-mono text-sm">%{result.walkForward.outSampleWinRate} Win Rate</span>
+                <span className="text-[10px] text-slate-400 block">{result.walkForward.outSampleProfitFactor}x Profit Factor</span>
               </div>
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
                 <span className="text-slate-500 text-[10px] block">Walk-Forward Verimliliği (WFE)</span>
-                <span className="text-indigo-300 font-bold font-mono text-sm">%96.0 (Mükemmel)</span>
-                <span className="text-[10px] text-emerald-400 block">Aşırı uyarlama riski yok.</span>
+                <span className="text-indigo-300 font-bold font-mono text-sm">%{result.walkForward.wfePct}</span>
+                <span className="text-[10px] text-emerald-400 block leading-tight">{result.walkForward.validationVerdict}</span>
               </div>
             </div>
           </div>
