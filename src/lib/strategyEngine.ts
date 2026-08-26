@@ -30,24 +30,27 @@ export function evaluateSignal(
   currency: CurrencyType,
   tech: TechnicalIndicators,
   candles: Candle[],
-  catalystInfo?: { catalystScore: number; catalystSummary: string; news: StockNewsItem[] }
+  catalystInfo?: { catalystScore: number; catalystSummary: string; news: StockNewsItem[] },
+  isBacktest: boolean = false
 ): Signal | null {
   const { price, ema9, ema20, ema50, rsi14, atr14, rvol, high20, changePercent } = tech;
   const currSign = currency === 'TRY' ? '₺' : '$';
 
   // 🛡️ 31. MARKET DATA INTEGRITY, PUMP & DUMP & CORPOPRATE ACTION FILTER (FAIL-SAFE)
   const catNews = catalystInfo ? catalystInfo.news : undefined;
-  const integrity = validateMarketDataIntegrity(ticker, candles, tech, catNews);
+  const integrity = validateMarketDataIntegrity(ticker, candles, tech, catNews, isBacktest);
   if (!integrity.isValid || integrity.isBlocked) {
     // Şüpheli/manipüle veri -> SİNYAL YOK (FAIL SAFE)
     return null;
   }
 
-  // ⏱️ SEANS AÇILIŞ/KAPANIŞ KORUMASI (SESSION VOLATILITY MUTE)
-  const { isSessionMuteActive } = require('./marketHours');
-  const muteCheck = isSessionMuteActive(market);
-  if (muteCheck.isMuted) {
-    return null; // Açılış/Kapanış seans volatilitesinde sahte kırılımları filtrele
+  // ⏱️ SEANS AÇILIŞ/KAPANIŞ KORUMASI (SESSION VOLATILITY MUTE - skip in backtests)
+  if (!isBacktest) {
+    const { isSessionMuteActive } = require('./marketHours');
+    const muteCheck = isSessionMuteActive(market);
+    if (muteCheck.isMuted) {
+      return null; // Açılış/Kapanış seans volatilitesinde sahte kırılımları filtrele
+    }
   }
 
   let catScore = catalystInfo ? catalystInfo.catalystScore : 0;

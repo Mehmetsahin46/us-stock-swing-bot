@@ -22,7 +22,8 @@ export function validateMarketDataIntegrity(
   ticker: string,
   candles: Candle[],
   tech: TechnicalIndicators,
-  news?: StockNewsItem[]
+  news?: StockNewsItem[],
+  isBacktest: boolean = false
 ): DataIntegrityResult {
   let confidence = 100;
   let isBlocked = false;
@@ -49,7 +50,7 @@ export function validateMarketDataIntegrity(
     };
   }
 
-  // 1. Stale Data Check
+  // 1. Stale Data Check (Skip in backtests)
   const lastCandle = candles[candles.length - 1];
   const candleTime = lastCandle ? new Date(lastCandle.date).getTime() : 0;
   const now = Date.now();
@@ -59,7 +60,7 @@ export function validateMarketDataIntegrity(
   let staleMsg = 'Veri taze ve canlı (Gecikmesiz).';
   const dayOfWeek = new Date().getDay();
   const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-  if (isWeekday && ageSeconds > 86400 * 3) {
+  if (!isBacktest && isWeekday && ageSeconds > 86400 * 3) {
     confidence -= 40;
     stalePassed = false;
     staleMsg = `⚠️ Bayat Veri: Son fiyat verisi ${Math.floor(ageSeconds / 3600)} saat öncesine ait.`;

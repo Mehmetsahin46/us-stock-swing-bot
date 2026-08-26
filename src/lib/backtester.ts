@@ -18,7 +18,7 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
     : COMBINED_UNIVERSE;
 
   const tickerList = universe.slice(0, 15);
-  const rangeStr = periodMonths <= 3 ? '3mo' : periodMonths <= 6 ? '6mo' : '1y';
+  const rangeStr = periodMonths <= 3 ? '3mo' : periodMonths <= 6 ? '6mo' : periodMonths <= 24 ? '2y' : '5y';
   const tickerCandlesMap = new Map<string, Candle[]>();
 
   for (const item of tickerList) {
@@ -110,7 +110,17 @@ export async function runBacktest(params: BacktestParams): Promise<BacktestResul
         const technicals = calculateTechnicals(historicalSlice);
         if (!technicals) continue;
 
-        const signal = evaluateSignal(item.ticker, item.displayTicker, item.sector, item.market, item.currency, technicals, historicalSlice);
+        const signal = evaluateSignal(
+          item.ticker,
+          item.displayTicker,
+          item.sector,
+          item.market,
+          item.currency,
+          technicals,
+          historicalSlice,
+          undefined,
+          true // isBacktest = true (Stale data ve seans kontrollerini atla)
+        );
         if (signal && (!params.strategies || params.strategies.length === 0 || params.strategies.includes(signal.strategy))) {
           const riskAmount = totalEquity * (riskPerTradePct / 100);
           const riskPerShare = Math.max(0.1, signal.suggestedEntry - signal.stopLoss);
