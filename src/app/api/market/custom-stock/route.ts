@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     console.error('Custom stock validation error:', err);
     return NextResponse.json({
       success: false,
-      error: `Doğrulama sırasında hata oluştu: ${err.message || 'Bilinmeyen hata'}`
+      error: 'Doğrulama servisi geçici olarak yanıt veremedi. Lütfen tekrar deneyin.'
     }, { status: 500 });
   }
 }
@@ -170,8 +170,7 @@ export async function DELETE(request: NextRequest) {
         }, { onConflict: 'id' });
     }
 
-    return NextResponse.json({ success: true, message: `${ticker} takip listesinden kaldırıldı.` });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Silme işlemi gerçekleştirilemedi.' }, { status: 500 });
   }
 }

@@ -118,6 +118,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Automated cron failed:', error);
-    return NextResponse.json({ success: false, error: 'Cron islemi sirasinda hata olustu.', details: String(error) }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sistem güvenli modda: İşlem tamamlanamadı.' }, { status: 500 });
   }
 }
