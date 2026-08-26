@@ -44,7 +44,7 @@ export function openPositionForMarket(
   const riskPerShare = Math.max(0.1, signal.suggestedEntry - signal.stopLoss);
   const sharesFromRisk = Math.floor(riskAmount / riskPerShare);
 
-  const maxCapitalPerPosition = Math.max(signal.suggestedEntry, portfolio.totalEquity * 0.22);
+  const maxCapitalPerPosition = Math.max(signal.suggestedEntry, portfolio.totalEquity * 0.12);
   const sharesFromCapitalCap = Math.floor(maxCapitalPerPosition / signal.suggestedEntry);
 
   let shares = Math.min(sharesFromRisk, sharesFromCapitalCap);

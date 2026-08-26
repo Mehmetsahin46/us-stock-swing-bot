@@ -52,12 +52,13 @@ export async function GET() {
     const bistOpen = isBISTOpen();
     if (dualState.bist.autoTrade && bistOpen) {
       const bistSignals: Signal[] = scanResults
-        .filter(r => r.market === 'BIST' && r.signal !== null)
+        .filter(r => r.market === 'BIST' && r.signal !== null && r.signal.score >= 72 && r.signal.riskReward >= 1.8)
         .map(r => r.signal as Signal)
-        .sort((a, b) => b.score - a.score);
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3); // Max 3 new positions per scan cycle
 
       for (const sig of bistSignals) {
-        if (sig.score >= 60) {
+        if (sig.score >= 72) {
           const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.bist);
           if (success) {
             dualState.bist = afterTrade;
@@ -80,12 +81,13 @@ export async function GET() {
     const usOpen = isUSOpen();
     if (dualState.us.autoTrade && usOpen) {
       const usSignals: Signal[] = scanResults
-        .filter(r => r.market === 'US' && r.signal !== null)
+        .filter(r => r.market === 'US' && r.signal !== null && r.signal.score >= 72 && r.signal.riskReward >= 1.8)
         .map(r => r.signal as Signal)
-        .sort((a, b) => b.score - a.score);
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3); // Max 3 new positions per scan cycle
 
       for (const sig of usSignals) {
-        if (sig.score >= 60) {
+        if (sig.score >= 72) {
           const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.us);
           if (success) {
             dualState.us = afterTrade;

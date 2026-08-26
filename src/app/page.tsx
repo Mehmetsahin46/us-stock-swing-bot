@@ -93,26 +93,32 @@ export default function HomePage() {
   async function handleScanMarket() {
     setIsScanning(true);
     try {
+      // Step 1: Call cron which scans all 200 stocks, updates positions, and auto-trades
       const cronRes = await fetch('/api/cron');
       const cronData = await cronRes.json();
 
-      const scanRes = await fetch('/api/market/scan?market=ALL');
-      const scanData = await scanRes.json();
-
-      if (scanData.success && scanData.data) {
-        setScanResults(scanData.data);
-      }
-
+      // Step 2: Sync state from server (includes updated PnL, new positions, closed trades)
       await syncWithServer();
 
+      // Step 3: Fetch scan results for the Scanner tab display
+      try {
+        const scanRes = await fetch('/api/market/scan?market=ALL');
+        const scanData = await scanRes.json();
+        if (scanData.success && scanData.data) {
+          setScanResults(scanData.data);
+        }
+      } catch {
+        // Scanner tab data is optional - don't block if it fails
+      }
+
       if (cronData.logs && cronData.logs.length > 0) {
-        showToast(`İşlem Güncellemesi: ${cronData.logs.slice(0, 2).join(' | ')}`);
+        showToast(`İşlem: ${cronData.logs.slice(0, 2).join(' | ')}`);
       } else {
-        showToast('Piyasalar tarandı ve açık pozisyonlar güncellendi.');
+        showToast('Piyasalar tarandı ve pozisyonlar güncellendi.');
       }
     } catch (err) {
       console.error(err);
-      showToast('Piyasa taranırken bir bağlantı hatası oluştu.');
+      showToast('Piyasa taranırken bağlantı hatası oluştu.');
     } finally {
       setIsScanning(false);
     }
