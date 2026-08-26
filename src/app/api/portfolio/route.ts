@@ -28,9 +28,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.state) {
-      const merged = mergeDualStates(currentState, body.state as DualPortfolioState);
-      await saveDualPortfolioState(merged);
-      return NextResponse.json({ success: true, state: merged });
+      await saveDualPortfolioState(body.state as DualPortfolioState);
+      return NextResponse.json({ success: true, state: body.state });
     }
 
     return NextResponse.json({ success: false, error: 'Gecersiz istek.' }, { status: 400 });

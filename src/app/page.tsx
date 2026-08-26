@@ -24,20 +24,11 @@ import { INITIAL_DUAL_STATE } from '@/lib/constants';
 import { mergeDualStates } from '@/lib/stateSync';
 import { LayoutDashboard, Radio, History, PlayCircle, ShieldCheck, Bell, ShieldAlert } from 'lucide-react';
 
-const STORAGE_KEY = 'dual_market_swing_portfolio_v5';
+const STORAGE_KEY = 'dual_market_swing_portfolio_v7_supabase';
 
 export default function HomePage() {
-  const [dualState, setDualState] = useState<DualPortfolioState>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) return JSON.parse(saved);
-      } catch (e) {
-        console.warn(e);
-      }
-    }
-    return INITIAL_DUAL_STATE;
-  });
+  const [dualState, setDualState] = useState<DualPortfolioState>(INITIAL_DUAL_STATE);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   const [activeMarket, setActiveMarket] = useState<MarketType>('BIST');
   const [scanResults, setScanResults] = useState<StockScanResult[]>([]);
@@ -51,22 +42,25 @@ export default function HomePage() {
     setTimeout(() => setToastMessage(null), 4500);
   }
 
-  // 1. Sync & Merge with Server on initial load
+  // 1. Sync directly with Supabase server state (Single Source of Truth)
   const syncWithServer = useCallback(async () => {
     try {
       const res = await fetch('/api/portfolio');
       const data = await res.json();
       if (data.success && data.state) {
-        setDualState((prev) => {
-          const merged = mergeDualStates(prev, data.state);
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-          } catch (err) {}
-          return merged;
-        });
+        setDualState(data.state);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
+        } catch (err) {}
       }
     } catch (e) {
-      console.warn('Fallback to local storage:', e);
+      console.warn('Server sync error, falling back to local:', e);
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) setDualState(JSON.parse(saved));
+      } catch (err) {}
+    } finally {
+      setIsInitialized(true);
     }
   }, []);
 
