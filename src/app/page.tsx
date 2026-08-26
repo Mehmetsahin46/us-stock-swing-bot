@@ -123,7 +123,8 @@ export default function HomePage() {
 
   useEffect(() => {
     handleScanMarket();
-    const interval = setInterval(handleScanMarket, 90000);
+    // ⚡ Ultra-fast 30-second live market scan & sync
+    const interval = setInterval(handleScanMarket, 30000);
     return () => clearInterval(interval);
   }, []);
 
