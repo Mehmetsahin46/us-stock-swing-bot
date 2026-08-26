@@ -51,14 +51,22 @@ export function openPositionForMarket(
     return { portfolio: currentPortfolio, success: false, message: 'Yeterli nakit rezervi yok.' };
   }
 
-  const riskAmount = portfolio.totalEquity * (portfolio.riskPerTradePct / 100);
-  const riskPerShare = Math.max(0.1, signal.suggestedEntry - signal.stopLoss);
-  const sharesFromRisk = Math.floor(riskAmount / riskPerShare);
+  // 🎯 DİNAMİK GÜVEN TAHSİSİ (Dynamic Conviction Sizing)
+  // Sinyal kalitesine ve haber katalizörüne göre kademeli bütçe ayırma:
+  // - Skor >= 90: %25 Sermaye (A+ Elit Fırsat - Yüksek Kazanç Hedefi)
+  // - Skor >= 80: %16 Sermaye (Güçlü Trend / Hacimli Kırılım)
+  // - Skor < 80:  %10 Sermaye (Standart Fırsat)
+  let capitalRatio = 0.10;
+  if (signal.score >= 90) {
+    capitalRatio = 0.25;
+  } else if (signal.score >= 80) {
+    capitalRatio = 0.16;
+  }
 
-  const maxCapitalPerPosition = Math.max(signal.suggestedEntry, portfolio.totalEquity * 0.12);
+  const maxCapitalPerPosition = Math.max(signal.suggestedEntry, portfolio.totalEquity * capitalRatio);
   const sharesFromCapitalCap = Math.floor(maxCapitalPerPosition / signal.suggestedEntry);
 
-  let shares = Math.min(sharesFromRisk, sharesFromCapitalCap);
+  let shares = sharesFromCapitalCap;
   if (shares <= 0) shares = 1;
 
   let totalCost = shares * signal.suggestedEntry;
