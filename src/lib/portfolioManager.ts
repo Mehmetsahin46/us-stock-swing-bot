@@ -20,6 +20,17 @@ export function openPositionForMarket(
 ): { portfolio: MarketPortfolio; success: boolean; message: string } {
   const portfolio = JSON.parse(JSON.stringify(currentPortfolio)) as MarketPortfolio;
 
+  // 1. Circuit Breaker Guard: If daily drawdown > 2.5%, freeze new buys
+  if (portfolio.unrealizedPnL < 0 && Math.abs(portfolio.unrealizedPnL) > portfolio.totalEquity * 0.025) {
+    return { portfolio, success: false, message: `⚠️ Devre Kesici Aktif: Günlük portföy riski %2.5 limitini aştığı için yeni alımlar donduruldu.` };
+  }
+
+  // 2. Sector Concentration Guard: Max 3 stocks per sector
+  const sectorCount = portfolio.positions.filter(p => p.sector === signal.sector).length;
+  if (sectorCount >= 3) {
+    return { portfolio, success: false, message: `Sektörel risk limiti: "${signal.sector}" sektöründen en fazla 3 hisseye izin verilir.` };
+  }
+
   const existing = portfolio.positions.find(p => p.ticker === signal.ticker && p.status === 'OPEN');
   if (existing) {
     return { portfolio: currentPortfolio, success: false, message: `${signal.displayTicker} i\u00e7in zaten a\u00e7\u0131k bir pozisyon mevcut.` };
@@ -145,11 +156,17 @@ export function updateMarketPositionsWithQuotes(
       }
     }
 
-    if (portfolio.useBreakevenTrailing && pos.tp1Hit && currentPrice > pos.target1) {
-      const trailingBuffer = (pos.target1 - pos.entryPrice) * 0.4;
-      const potentialNewStop = Number((currentPrice - trailingBuffer).toFixed(2));
-      if (potentialNewStop > pos.stopLoss) {
-        pos.stopLoss = potentialNewStop;
+    // 🛡️ DİNAMİK KÂR TAKİP EDEN STOP (Dynamic Trailing Stop)
+    if (portfolio.useBreakevenTrailing) {
+      if (pos.highestPriceSinceEntry >= pos.entryPrice * 1.03) {
+        pos.isBreakeven = true;
+        pos.stopLoss = Math.max(pos.stopLoss, pos.entryPrice);
+      }
+      if (pos.highestPriceSinceEntry >= pos.entryPrice * 1.05) {
+        const dynamicTrailingStop = Number((pos.highestPriceSinceEntry * 0.975).toFixed(2));
+        if (dynamicTrailingStop > pos.stopLoss) {
+          pos.stopLoss = dynamicTrailingStop;
+        }
       }
     }
 

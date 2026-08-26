@@ -1,9 +1,23 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#0B0F19'
+};
+
 export const metadata: Metadata = {
-  title: 'US Stock Swing Bot | 1-14 Gün Kağıt İşlem Simülatörü',
-  description: 'ABD Borsası otomatik teknik tarama, swing trading ve analiz doğrulama platformu',
+  title: 'Global & BIST Swing Bot | Profesyonel Ticaret Portalı',
+  description: 'Borsa İstanbul ve ABD Borsaları yapay zeka destekli otonom swing ticaret botu',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'SwingBot'
+  }
 };
 
 export default function RootLayout({

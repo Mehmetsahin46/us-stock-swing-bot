@@ -1,0 +1,17 @@
+{
+  "name": "Global & BIST Swing Bot",
+  "short_name": "SwingBot",
+  "description": "Borsa İstanbul & ABD Borsaları Profesyonel Swing Ticaret Botu",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F19",
+  "theme_color": "#0B0F19",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
