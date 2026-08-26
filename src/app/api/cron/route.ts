@@ -1,18 +1,22 @@
 import { NextResponse } from 'next/server';
 import { scanUniverse, fetchMarketRegime } from '@/lib/marketData';
-import { getDualPortfolioState, saveDualPortfolioState } from '@/lib/serverStore';
+import { getDualPortfolioState, saveDualPortfolioState, saveTradeToHistory } from '@/lib/supabaseStore';
 import { openPositionForMarket, updateMarketPositionsWithQuotes } from '@/lib/portfolioManager';
+import { isBISTOpen, isUSOpen, getMarketStatus } from '@/lib/marketHours';
 import { Signal } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const maxDuration = 60;
 
 export async function GET() {
   const startTime = new Date().toISOString();
   const logs: string[] = [];
 
   try {
-    const dualState = getDualPortfolioState();
+    const dualState = await getDualPortfolioState();
+    const marketStatus = getMarketStatus();
+    logs.push(marketStatus.message);
 
     const bistRegime = await fetchMarketRegime('BIST');
     const usRegime = await fetchMarketRegime('US');
@@ -28,16 +32,25 @@ export async function GET() {
       quotesMap.set(item.ticker, item.technicals.price);
     }
 
-    const { portfolio: updatedBist, events: bistCloseEvents } = updateMarketPositionsWithQuotes(dualState.bist, quotesMap);
+    // Update existing positions (always, even when market is closed - to sync prices)
+    const { portfolio: updatedBist, events: bistCloseEvents, closedTrades: bistClosed } =
+      updateMarketPositionsWithQuotes(dualState.bist, quotesMap);
     dualState.bist = updatedBist;
     logs.push(...bistCloseEvents);
 
-    const { portfolio: updatedUs, events: usCloseEvents } = updateMarketPositionsWithQuotes(dualState.us, quotesMap);
+    const { portfolio: updatedUs, events: usCloseEvents, closedTrades: usClosed } =
+      updateMarketPositionsWithQuotes(dualState.us, quotesMap);
     dualState.us = updatedUs;
     logs.push(...usCloseEvents);
 
-    // Auto-Trade for BIST (Score >= 60)
-    if (dualState.bist.autoTrade) {
+    // Save closed trades to Supabase trade_history table
+    for (const trade of [...bistClosed, ...usClosed]) {
+      await saveTradeToHistory(trade);
+    }
+
+    // Auto-Trade for BIST (Only when BIST market is open)
+    const bistOpen = isBISTOpen();
+    if (dualState.bist.autoTrade && bistOpen) {
       const bistSignals: Signal[] = scanResults
         .filter(r => r.market === 'BIST' && r.signal !== null)
         .map(r => r.signal as Signal)
@@ -59,10 +72,13 @@ export async function GET() {
           }
         }
       }
+    } else if (!bistOpen) {
+      logs.push('[BIST] Piyasa kapali - yeni alim yapilmadi.');
     }
 
-    // Auto-Trade for US (Score >= 60)
-    if (dualState.us.autoTrade) {
+    // Auto-Trade for US (Only when US market is open)
+    const usOpen = isUSOpen();
+    if (dualState.us.autoTrade && usOpen) {
       const usSignals: Signal[] = scanResults
         .filter(r => r.market === 'US' && r.signal !== null)
         .map(r => r.signal as Signal)
@@ -84,15 +100,18 @@ export async function GET() {
           }
         }
       }
+    } else if (!usOpen) {
+      logs.push('[US] Piyasa kapali - yeni alim yapilmadi.');
     }
 
     dualState.activityLogs = dualState.activityLogs.slice(0, 50);
-    saveDualPortfolioState(dualState);
+    await saveDualPortfolioState(dualState);
 
     return NextResponse.json({
       success: true,
-      job: 'automated-dual-market-cron-v5',
+      job: 'automated-dual-market-cron-v6',
       timestamp: startTime,
+      marketStatus: marketStatus.message,
       scannedCount: scanResults.length,
       bistOpenCount: dualState.bist.positions.length,
       usOpenCount: dualState.us.positions.length,
@@ -101,6 +120,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Automated cron failed:', error);
-    return NextResponse.json({ success: false, error: 'Cron işlemi sırasında hata oluştu.' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Cron islemi sirasinda hata olustu.', details: String(error) }, { status: 500 });
   }
 }
