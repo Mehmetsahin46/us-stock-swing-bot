@@ -83,6 +83,8 @@ export interface MarketRegime {
   reason: string;
 }
 
+export type SignalGrade = 'A+' | 'A' | 'B' | 'C';
+
 export interface Signal {
   id: string;
   ticker: string;
@@ -94,6 +96,7 @@ export interface Signal {
   strategyName: string;
   title: string;
   score: number;
+  grade: SignalGrade;
   technicalScore?: number;
   catalystScore?: number;
   catalystSummary?: string;
@@ -106,6 +109,8 @@ export interface Signal {
   riskReward: number;
   potentialGainPct: number;
   maxRiskPct: number;
+  expectedValuePct?: number; // Expected Value EV%
+  relativeStrength?: number; // RS relative to market
   estimatedDays?: number;
   estimatedTimeframe?: string;
   timestamp: string;
@@ -222,4 +227,90 @@ export interface BacktestResult {
   };
   equityCurve: { date: string; equity: number }[];
   trades: TradePosition[];
+}
+
+export type SignalTrackStatus = 
+  | 'ACTIVE' 
+  | 'SUCCESS_TP1' 
+  | 'SUCCESS_TP2' 
+  | 'STOPPED_SL' 
+  | 'INVALIDATED' 
+  | 'EXPIRED';
+
+export interface SignalTrackItem {
+  id: string;
+  ticker: string;
+  displayTicker: string;
+  market: MarketType;
+  currency: CurrencyType;
+  strategy: StrategyType;
+  strategyName: string;
+  grade: SignalGrade;
+  initialScore: number;
+  currentScore: number;
+  entryPrice: number;
+  stopLoss: number;
+  target1: number;
+  target2: number;
+  currentPrice: number;
+  highestPrice: number;
+  lowestPrice: number;
+  status: SignalTrackStatus;
+  resultPnLPct: number;
+  createdAt: string;
+  closedAt?: string;
+  invalidationReason?: string;
+  reasons: string[];
+  catalystSummary?: string;
+  expectedValuePct: number;
+}
+
+export interface StrategyPerformanceStat {
+  strategy: StrategyType;
+  strategyName: string;
+  totalSignals: number;
+  winningSignals: number;
+  losingSignals: number;
+  winRate: number;
+  profitFactor: number;
+  avgReturnPct: number;
+}
+
+export interface SignalPerformanceMetrics {
+  totalSignals: number;
+  activeSignals: number;
+  winRateAllTime: number;
+  winRate7d: number;
+  winRate30d: number;
+  winRate90d: number;
+  profitFactor: number;
+  maxDrawdownPct: number;
+  totalRealizedProfitPct: number;
+  avgWinningTradePct: number;
+  avgLosingTradePct: number;
+  strategyBreakdown: StrategyPerformanceStat[];
+}
+
+export interface GlobalMacroRegime {
+  vix: number;
+  vixStatus: 'LOW' | 'NORMAL' | 'ELEVATED' | 'EXTREME';
+  dxy: number;
+  spyTrend: 'BULLISH' | 'NEUTRAL' | 'BEARISH';
+  qqqTrend: 'BULLISH' | 'NEUTRAL' | 'BEARISH';
+  usdTryRate: number;
+  riskAppetite: 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF';
+  summary: string;
+}
+
+export interface WatchlistItem {
+  ticker: string;
+  displayTicker: string;
+  market: MarketType;
+  currency: CurrencyType;
+  name: string;
+  sector: SectorType;
+  addedAt: string;
+  notes?: string;
+  targetPriceAlert?: number;
+  scoreAlert?: number;
 }

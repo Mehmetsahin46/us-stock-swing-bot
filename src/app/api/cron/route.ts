@@ -63,6 +63,13 @@ export async function GET() {
       await saveTradeToHistory(trade);
     }
 
+    // 🎯 Sinyal Takip & Sonuçlandırma Motoru (Signal Tracker & Invalidation)
+    const { recordNewSignals, resolveSignalsWithQuotes } = await import('@/lib/signalTracker');
+    const validSignals = scanResults.map(r => r.signal).filter((s): s is Signal => s !== null);
+    await recordNewSignals(validSignals);
+    const { events: signalEvents } = await resolveSignalsWithQuotes(quotesMap);
+    logs.push(...signalEvents);
+
     // Auto-Trade for BIST (Only when BIST market is actually open: 10:00 - 18:00 Istanbul time)
     if (dualState.bist.autoTrade && bistOpen) {
       const bistSignals: Signal[] = scanResults

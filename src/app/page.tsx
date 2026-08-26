@@ -12,6 +12,11 @@ import { SettingsModal } from '@/components/SettingsModal';
 import { AddStockModal } from '@/components/AddStockModal';
 import { NewsView } from '@/components/NewsView';
 import { InstallPwaModal } from '@/components/InstallPwaModal';
+import { SignalAnalyticsView } from '@/components/SignalAnalyticsView';
+import { TopOpportunitiesPanel } from '@/components/TopOpportunitiesPanel';
+import { MarketHeatmapView } from '@/components/MarketHeatmapView';
+import { SignalDetailModal } from '@/components/SignalDetailModal';
+import { WatchlistView } from '@/components/WatchlistView';
 import { 
   DualPortfolioState, 
   MarketPortfolio,
@@ -27,7 +32,21 @@ import { INITIAL_DUAL_STATE } from '@/lib/constants';
 import { mergeDualStates } from '@/lib/stateSync';
 import { sendLocalNotification } from '@/lib/notificationManager';
 import { isBISTOpen, isUSOpen } from '@/lib/marketHours';
-import { LayoutDashboard, Radio, History, PlayCircle, ShieldCheck, Bell, ShieldAlert, Plus, Newspaper } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Radio, 
+  History, 
+  PlayCircle, 
+  ShieldCheck, 
+  Bell, 
+  ShieldAlert, 
+  Plus, 
+  Newspaper,
+  Flame,
+  BarChart3,
+  LayoutGrid,
+  Star
+} from 'lucide-react';
 
 const STORAGE_KEY = 'dual_market_swing_portfolio_v7_supabase';
 
@@ -38,10 +57,15 @@ export default function HomePage() {
   const [activeMarket, setActiveMarket] = useState<MarketType>('BIST');
   const [scanResults, setScanResults] = useState<StockScanResult[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'SCANNER' | 'NEWS' | 'HISTORY' | 'BACKTEST'>('DASHBOARD');
+  const [activeTab, setActiveTab] = useState<
+    'DASHBOARD' | 'TOP_OPPORTUNITIES' | 'SCANNER' | 'HEATMAP' | 'SIGNAL_ANALYTICS' | 'NEWS' | 'WATCHLIST' | 'HISTORY' | 'BACKTEST'
+  >('DASHBOARD');
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [addStockOpen, setAddStockOpen] = useState<boolean>(false);
   const [installModalOpen, setInstallModalOpen] = useState<boolean>(false);
+  const [detailModalOpen, setDetailModalOpen] = useState<boolean>(false);
+  const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null);
+  const [selectedResult, setSelectedResult] = useState<StockScanResult | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   function showToast(msg: string) {
@@ -58,59 +82,91 @@ export default function HomePage() {
         setDualState(data.state);
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
-        } catch (err) {}
+        } catch (e) {}
       }
-    } catch (e) {
-      console.warn('Server sync error, falling back to local:', e);
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) setDualState(JSON.parse(saved));
-      } catch (err) {}
-    } finally {
-      setIsInitialized(true);
+    } catch (err) {
+      console.warn('[Sync] Offline or connection error, using local state.');
     }
   }, []);
 
-  useEffect(() => {
-    syncWithServer();
-  }, [syncWithServer]);
-
-  // Persist changes to both localStorage and Server
-  async function persistState(newState: DualPortfolioState) {
-    setDualState(newState);
+  // Save to Supabase
+  const saveStateToServer = async (stateToSave: DualPortfolioState) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
       await fetch('/api/portfolio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: newState })
+        body: JSON.stringify(stateToSave)
       });
     } catch (err) {
-      console.error('Error persisting state:', err);
+      console.error('[Sync] Error posting state to server:', err);
     }
+  };
+
+  // Initial Load: local fallback first, then immediate Supabase fetch
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.bist && parsed.us) {
+          setDualState(mergeDualStates(parsed, INITIAL_DUAL_STATE));
+        }
+      }
+    } catch (e) {}
+
+    syncWithServer().finally(() => setIsInitialized(true));
+  }, [syncWithServer]);
+
+  // Handle Settings Save
+  function handleSaveSettings(newBist: MarketPortfolio, newUs: MarketPortfolio) {
+    setDualState(prev => {
+      const updated: DualPortfolioState = {
+        ...prev,
+        bist: newBist,
+        us: newUs
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {}
+      saveStateToServer(updated);
+      return updated;
+    });
+    showToast('Ayarlar Supabase bulutuna ve yerel hafızaya kaydedildi.');
   }
 
-  // 2. Scan Market & Auto-Execute with Smart Merge
+  // Reset Market
+  function handleResetMarket(market: MarketType) {
+    setDualState(prev => {
+      const updated = JSON.parse(JSON.stringify(prev)) as DualPortfolioState;
+      if (market === 'BIST') {
+        updated.bist = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.bist));
+      } else {
+        updated.us = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.us));
+      }
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {}
+      saveStateToServer(updated);
+      return updated;
+    });
+    showToast(`${market} portföyü ve işlem geçmişi sıfırlandı.`);
+  }
+
+  // Trigger Live Scan
   async function handleScanMarket() {
     setIsScanning(true);
     try {
-      // Step 1: Call cron which scans all 200 stocks, updates positions, and auto-trades
-      const cronRes = await fetch('/api/cron');
+      const scanRes = await fetch('/api/market/scan', { cache: 'no-store' });
+      const scanData = await scanRes.json();
+
+      if (scanData.success && scanData.results) {
+        setScanResults(scanData.results);
+      }
+
+      const cronRes = await fetch('/api/cron', { cache: 'no-store' });
       const cronData = await cronRes.json();
 
-      // Step 2: Sync state from server (includes updated PnL, new positions, closed trades)
       await syncWithServer();
-
-      // Step 3: Fetch scan results for the Scanner tab display
-      try {
-        const scanRes = await fetch('/api/market/scan?market=ALL');
-        const scanData = await scanRes.json();
-        if (scanData.success && scanData.data) {
-          setScanResults(scanData.data);
-        }
-      } catch {
-        // Scanner tab data is optional - don't block if it fails
-      }
 
       if (cronData.logs && cronData.logs.length > 0) {
         showToast(`İşlem: ${cronData.logs.slice(0, 2).join(' | ')}`);
@@ -127,7 +183,6 @@ export default function HomePage() {
 
   useEffect(() => {
     handleScanMarket();
-    // ⚡ Sadece borsa seans saatlerinde 30 saniyede bir otomatik tara
     const interval = setInterval(() => {
       if (isBISTOpen() || isUSOpen()) {
         handleScanMarket();
@@ -144,79 +199,69 @@ export default function HomePage() {
     const { portfolio: newPort, success, message } = openPositionForMarket(signal, targetPortfolio);
 
     if (success) {
-      const updated: DualPortfolioState = {
-        ...dualState,
-        [signal.market === 'BIST' ? 'bist' : 'us']: newPort,
-        activityLogs: [
-          {
-            id: `log_${Date.now()}`,
-            timestamp: new Date().toISOString(),
-            market: signal.market,
-            message,
-            type: 'BUY'
-          },
-          ...dualState.activityLogs.slice(0, 49)
-        ]
-      };
-      persistState(updated);
-      showToast(message);
-      sendLocalNotification(`🔔 Yeni İşlem: ${signal.displayTicker} (${signal.market})`, {
-        body: `${message} - Hedef: ${signal.estimatedTimeframe || 'Bilinmiyor'}`
+      setDualState(prev => {
+        const updated = {
+          ...prev,
+          bist: signal.market === 'BIST' ? newPort : prev.bist,
+          us: signal.market === 'US' ? newPort : prev.us,
+          activityLogs: [
+            {
+              id: `log_${Date.now()}_${signal.ticker}`,
+              timestamp: new Date().toISOString(),
+              market: signal.market,
+              message,
+              type: 'BUY' as const
+            },
+            ...prev.activityLogs
+          ]
+        };
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        } catch (e) {}
+        saveStateToServer(updated);
+        return updated;
       });
+
+      sendLocalNotification(`🎯 Yeni İşlem: ${signal.displayTicker}`, {
+        body: `${signal.displayTicker} için ${signal.strategyName} ile alım emri açıldı. Hedef: ${signal.target2}`
+      });
+
+      showToast(`Başarılı: ${message}`);
     } else {
-      showToast(`Uyarı: ${message}`);
+      showToast(`Alım Yapılamadı: ${message}`);
     }
   }
 
   function handleManualClose(positionId: string) {
-    const { portfolio: newPort, success, message } = manuallyClosePositionInMarket(currentPortfolio, positionId);
+    const targetPortfolio = activeMarket === 'BIST' ? dualState.bist : dualState.us;
+    const { portfolio: newPort, success, message } = manuallyClosePositionInMarket(targetPortfolio, positionId);
+
     if (success) {
-      const updated: DualPortfolioState = {
-        ...dualState,
-        [activeMarket === 'BIST' ? 'bist' : 'us']: newPort,
-        activityLogs: [
-          {
-            id: `log_${Date.now()}`,
-            timestamp: new Date().toISOString(),
-            market: activeMarket,
-            message,
-            type: 'SELL'
-          },
-          ...dualState.activityLogs.slice(0, 49)
-        ]
-      };
-      persistState(updated);
-      showToast(message);
-    }
-  }
-
-  function handleSaveSettings(newBist: MarketPortfolio, newUs: MarketPortfolio) {
-    const updated: DualPortfolioState = {
-      ...dualState,
-      bist: newBist,
-      us: newUs
-    };
-    persistState(updated);
-    showToast('Ayarlar kaydedildi.');
-  }
-
-  async function handleResetMarket(market: 'BIST' | 'US') {
-    try {
-      const res = await fetch('/api/portfolio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'RESET_MARKET', market })
-      });
-      const data = await res.json();
-      if (data.success && data.state) {
-        setDualState(data.state);
+      setDualState(prev => {
+        const updated = {
+          ...prev,
+          bist: activeMarket === 'BIST' ? newPort : prev.bist,
+          us: activeMarket === 'US' ? newPort : prev.us,
+          activityLogs: [
+            {
+              id: `log_${Date.now()}_close`,
+              timestamp: new Date().toISOString(),
+              market: activeMarket,
+              message,
+              type: 'SELL' as const
+            },
+            ...prev.activityLogs
+          ]
+        };
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
         } catch (e) {}
-        showToast(`${market} portföyü sıfırlandı.`);
-      }
-    } catch (err) {
-      console.error(err);
+        saveStateToServer(updated);
+        return updated;
+      });
+      showToast(message);
+    } else {
+      showToast(message);
     }
   }
 
@@ -256,94 +301,118 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab('DASHBOARD')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'DASHBOARD'
-                  ? 'bg-primary-500/15 text-primary-400 border border-primary-500/30 shadow-sm'
+                  ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25'
                   : 'text-slate-400 hover:text-white hover:bg-card'
               }`}
             >
-              <LayoutDashboard className="w-4 h-4" />
+              <LayoutDashboard className="w-3.5 h-3.5" />
               <span>{activeMarket === 'BIST' ? '🇹🇷 BIST Portföyü' : '🇺🇸 ABD Portföyü'}</span>
               {openPositionTickers.length > 0 && (
-                <span className="w-5 h-5 rounded-full bg-primary-500 text-white text-[10px] flex items-center justify-center font-bold">
+                <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-white text-[10px] font-bold">
                   {openPositionTickers.length}
                 </span>
               )}
             </button>
 
             <button
+              onClick={() => setActiveTab('TOP_OPPORTUNITIES')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'TOP_OPPORTUNITIES'
+                  ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-white shadow-md shadow-amber-500/25'
+                  : 'text-amber-400/90 hover:text-amber-300 hover:bg-card'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <span>Günün Fırsatları (A+)</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('SCANNER')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'SCANNER'
-                  ? 'bg-primary-500/15 text-primary-400 border border-primary-500/30 shadow-sm'
+                  ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25'
                   : 'text-slate-400 hover:text-white hover:bg-card'
               }`}
             >
-              <Radio className="w-4 h-4" />
-              <span>Canlı Piyasa Tarayıcısı</span>
+              <Radio className="w-3.5 h-3.5" />
+              <span>Canlı Tarayıcı</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('HEATMAP')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'HEATMAP'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25'
+                  : 'text-slate-400 hover:text-white hover:bg-card'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Isı Haritası</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('SIGNAL_ANALYTICS')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'SIGNAL_ANALYTICS'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/25'
+                  : 'text-emerald-400/90 hover:text-emerald-300 hover:bg-card'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Sinyal Analitiği</span>
             </button>
 
             <button
               onClick={() => setActiveTab('NEWS')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'NEWS'
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm font-bold'
+                  ? 'bg-indigo-500 text-white shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-card'
               }`}
             >
-              <Newspaper className="w-4 h-4 text-indigo-400" />
+              <Newspaper className="w-3.5 h-3.5" />
               <span>Haberler & Bilanço</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('HISTORY')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'HISTORY'
-                  ? 'bg-primary-500/15 text-primary-400 border border-primary-500/30 shadow-sm'
+              onClick={() => setActiveTab('WATCHLIST')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'WATCHLIST'
+                  ? 'bg-amber-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-card'
               }`}
             >
-              <History className="w-4 h-4" />
+              <Star className="w-3.5 h-3.5 text-amber-400" />
+              <span>İzleme Listesi</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('HISTORY')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'HISTORY'
+                  ? 'bg-primary-500 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-card'
+              }`}
+            >
+              <History className="w-3.5 h-3.5" />
               <span>İşlem Geçmişi ({currentPortfolio.history.length})</span>
             </button>
 
             <button
               onClick={() => setActiveTab('BACKTEST')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'BACKTEST'
-                  ? 'bg-accent-500/15 text-accent-400 border border-accent-500/30 shadow-sm'
+                  ? 'bg-accent-500 text-white shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-card'
               }`}
             >
-              <PlayCircle className="w-4 h-4" />
-              <span>Geriye Dönük Test (Backtest)</span>
+              <PlayCircle className="w-3.5 h-3.5" />
+              <span>Backtest</span>
             </button>
           </div>
-
-          <div className="hidden md:flex items-center gap-2 text-[11px] text-muted">
-            <span className="px-2 py-0.5 rounded bg-card border border-border">
-              Bütçe: <strong className="text-white">{activeMarket === 'BIST' ? '10.000 TL' : '500 USD'}</strong>
-            </span>
-            <span className="px-2 py-0.5 rounded bg-card border border-border">
-              Risk: <strong className="text-white">%{currentPortfolio.riskPerTradePct}</strong>
-            </span>
-          </div>
         </div>
-
-        {/* Market Regime Warning if Bearish */}
-        {currentRegime && currentRegime.trend === 'BEARISH' && (
-          <div className="p-3.5 rounded-xl bg-danger-500/10 border border-danger-500/30 text-danger-300 text-xs flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-danger-400 flex-shrink-0" />
-              <div>
-                <strong className="text-white">Piyasa Koruma Modu:</strong> {currentRegime.reason}
-              </div>
-            </div>
-            <span className="text-[11px] px-2 py-0.5 rounded bg-danger-500/20 text-danger-300 font-semibold uppercase flex-shrink-0">
-              Seçici Alım
-            </span>
-          </div>
-        )}
 
         {/* TAB 1: DASHBOARD */}
         {activeTab === 'DASHBOARD' && (
@@ -354,7 +423,7 @@ export default function HomePage() {
               <div className="lg:col-span-2 space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-white">
-                    {activeMarket === 'BIST' ? '🇹🇷 BIST Açık Pozisyonlar (1-14 Gün)' : '🇺🇸 ABD Açık Pozisyonlar (1-14 Gün)'}
+                    {activeMarket === 'BIST' ? '🇹🇷 BIST Açık Pozisyonlar (60 Gün Trend)' : '🇺🇸 ABD Açık Pozisyonlar (60 Gün Trend)'}
                   </h2>
                   <span className="text-xs text-muted">
                     {openPositionTickers.length} / {currentPortfolio.maxOpenPositions} Pozisyon
@@ -381,15 +450,28 @@ export default function HomePage() {
                     </span>
                   </div>
                   <ul className="text-muted space-y-1.5 list-disc pl-4 text-[11px]">
+                    <li><strong>Dinamik Bütçe Tahsisi:</strong> A+ Elit sinyallere %25, normal sinyallere %10 bütçe.</li>
                     <li><strong>Kademeli Kâr Alma:</strong> TP1'de %50 kâr cebe konur, stop maliyete çekilir.</li>
                     <li><strong>Başa-Baş Stop:</strong> Kâra geçmiş işlem asla zararla kapanmaz.</li>
-                    <li><strong>Hisse Sınırı:</strong> Tek hisseye en fazla %20 sermaye bağlanır (Dengeli sepet).</li>
-                    <li><strong>Sektör Sınırı:</strong> Aynı sektörden en fazla 4 hisseye izin verilir.</li>
+                    <li><strong>Sektör Sınırı:</strong> Aynı sektörden en fazla 3 hisseye izin verilir.</li>
                   </ul>
                 </div>
               </div>
             </div>
           </div>
+        )}
+
+        {/* TAB: TOP OPPORTUNITIES */}
+        {activeTab === 'TOP_OPPORTUNITIES' && (
+          <TopOpportunitiesPanel
+            results={scanResults}
+            onOpenTrade={handleOpenPaperTrade}
+            onOpenDetail={(sig, res) => {
+              setSelectedSignal(sig);
+              setSelectedResult(res);
+              setDetailModalOpen(true);
+            }}
+          />
         )}
 
         {/* TAB 2: LIVE SCANNER */}
@@ -402,6 +484,21 @@ export default function HomePage() {
           />
         )}
 
+        {/* TAB: MARKET HEATMAP */}
+        {activeTab === 'HEATMAP' && (
+          <MarketHeatmapView
+            results={scanResults}
+            onOpenTrade={handleOpenPaperTrade}
+          />
+        )}
+
+        {/* TAB: SIGNAL ANALYTICS */}
+        {activeTab === 'SIGNAL_ANALYTICS' && (
+          <SignalAnalyticsView
+            onOpenTrade={handleOpenPaperTrade}
+          />
+        )}
+
         {/* TAB 3: NEWS & CATALYSTS */}
         {activeTab === 'NEWS' && (
           <NewsView
@@ -410,12 +507,21 @@ export default function HomePage() {
           />
         )}
 
+        {/* TAB: WATCHLIST */}
+        {activeTab === 'WATCHLIST' && (
+          <WatchlistView
+            results={scanResults}
+            onOpenTrade={handleOpenPaperTrade}
+            onOpenAddStock={() => setAddStockOpen(true)}
+          />
+        )}
+
         {/* TAB 4: TRADE HISTORY */}
         {activeTab === 'HISTORY' && (
           <TradeHistory history={currentPortfolio.history} />
         )}
 
-        {/* TAB 4: BACKTEST */}
+        {/* TAB: BACKTEST */}
         {activeTab === 'BACKTEST' && (
           <BacktestView />
         )}
@@ -443,6 +549,14 @@ export default function HomePage() {
       <InstallPwaModal
         isOpen={installModalOpen}
         onClose={() => setInstallModalOpen(false)}
+      />
+
+      <SignalDetailModal
+        isOpen={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        signal={selectedSignal}
+        result={selectedResult}
+        onOpenTrade={handleOpenPaperTrade}
       />
     </div>
   );

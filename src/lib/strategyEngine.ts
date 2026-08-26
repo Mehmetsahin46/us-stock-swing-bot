@@ -1,4 +1,5 @@
-import { Candle, CurrencyType, MarketType, SectorType, Signal, StockNewsItem, StrategyType, TechnicalIndicators } from './types';
+import { Candle, CurrencyType, MarketType, SectorType, Signal, SignalGrade, StockNewsItem, StrategyType, TechnicalIndicators } from './types';
+import { calculateSignalGrade, calculateExpectedValue } from './quantEngine';
 
 function calculateEstimatedTimeframe(targetPrice: number, currentPrice: number, atr14: number, rvol: number): { estimatedDays: number; estimatedTimeframe: string } {
   const distance = Math.max(0.1, targetPrice - currentPrice);
@@ -64,6 +65,8 @@ export function evaluateSignal(
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
       const technicalScore = Math.min(94, Math.round(70 + (rvol > 1 ? 12 : 6) + (rsi14 > 45 ? 10 : 5)));
       const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const grade = calculateSignalGrade(finalScore, catScore, rvol);
+      const expectedValuePct = calculateExpectedValue(75, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
       return {
@@ -77,6 +80,7 @@ export function evaluateSignal(
         strategyName: 'EMA 20 Trend Desteği (Pullback)',
         title: `${displayTicker} - 20 Günlük Ortalama Desteğinden Tepki`,
         score: finalScore,
+        grade,
         technicalScore,
         catalystScore: catScore,
         catalystSummary: catSummary,
@@ -89,6 +93,7 @@ export function evaluateSignal(
         riskReward,
         potentialGainPct,
         maxRiskPct,
+        expectedValuePct,
         estimatedDays,
         estimatedTimeframe,
         timestamp: new Date().toISOString()
@@ -111,6 +116,8 @@ export function evaluateSignal(
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
       const technicalScore = Math.min(96, Math.round(75 + (rvol > 1.2 ? 14 : 8) + (changePercent > 0.5 ? 6 : 2)));
       const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const grade = calculateSignalGrade(finalScore, catScore, rvol);
+      const expectedValuePct = calculateExpectedValue(72, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
       return {
@@ -124,6 +131,7 @@ export function evaluateSignal(
         strategyName: 'Yüksek Hacimli Kırılım (Breakout)',
         title: `${displayTicker} - 20 Günlük Zirve Kırılımı (RVOL: ${rvol}x)`,
         score: finalScore,
+        grade,
         technicalScore,
         catalystScore: catScore,
         catalystSummary: catSummary,
@@ -136,6 +144,7 @@ export function evaluateSignal(
         riskReward,
         potentialGainPct,
         maxRiskPct,
+        expectedValuePct,
         estimatedDays,
         estimatedTimeframe,
         timestamp: new Date().toISOString()
@@ -156,6 +165,8 @@ export function evaluateSignal(
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
       const technicalScore = Math.min(92, Math.round(68 + (changePercent > 1.5 ? 12 : 6) + (rsi14 > 58 ? 8 : 4)));
       const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const grade = calculateSignalGrade(finalScore, catScore, rvol);
+      const expectedValuePct = calculateExpectedValue(70, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
       return {
@@ -169,6 +180,7 @@ export function evaluateSignal(
         strategyName: 'Güçlü Momentum & Trend Takibi',
         title: `${displayTicker} - 9/20 EMA Hızlı Trend Takibi`,
         score: finalScore,
+        grade,
         technicalScore,
         catalystScore: catScore,
         catalystSummary: catSummary,
@@ -181,6 +193,7 @@ export function evaluateSignal(
         riskReward,
         potentialGainPct,
         maxRiskPct,
+        expectedValuePct,
         estimatedDays,
         estimatedTimeframe,
         timestamp: new Date().toISOString()
@@ -202,6 +215,8 @@ export function evaluateSignal(
       const riskReward = Number((potentialGainPct / maxRiskPct).toFixed(2));
       const technicalScore = Math.min(90, Math.round(65 + (40 - rsi14) * 1.5));
       const finalScore = Math.min(99, Math.max(30, technicalScore + catScore));
+      const grade = calculateSignalGrade(finalScore, catScore, rvol);
+      const expectedValuePct = calculateExpectedValue(68, potentialGainPct, maxRiskPct);
       const { estimatedDays, estimatedTimeframe } = calculateEstimatedTimeframe(target2, price, atr14, rvol);
 
       return {
@@ -215,6 +230,7 @@ export function evaluateSignal(
         strategyName: 'Aşırı Satım Tepki Alımı (Mean Reversion)',
         title: `${displayTicker} - RSI ${rsi14} Aşırı Satım Bölgesinden Tepki`,
         score: finalScore,
+        grade,
         technicalScore,
         catalystScore: catScore,
         catalystSummary: catSummary,
@@ -227,6 +243,7 @@ export function evaluateSignal(
         riskReward,
         potentialGainPct,
         maxRiskPct,
+        expectedValuePct,
         estimatedDays,
         estimatedTimeframe,
         timestamp: new Date().toISOString()
