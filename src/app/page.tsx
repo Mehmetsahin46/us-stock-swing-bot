@@ -9,6 +9,7 @@ import { TradeHistory } from '@/components/TradeHistory';
 import { BacktestView } from '@/components/BacktestView';
 import { EquityChart } from '@/components/EquityChart';
 import { SettingsModal } from '@/components/SettingsModal';
+import { AddStockModal } from '@/components/AddStockModal';
 import { 
   DualPortfolioState, 
   MarketPortfolio,
@@ -22,7 +23,7 @@ import {
 } from '@/lib/portfolioManager';
 import { INITIAL_DUAL_STATE } from '@/lib/constants';
 import { mergeDualStates } from '@/lib/stateSync';
-import { LayoutDashboard, Radio, History, PlayCircle, ShieldCheck, Bell, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Radio, History, PlayCircle, ShieldCheck, Bell, ShieldAlert, Plus } from 'lucide-react';
 
 const STORAGE_KEY = 'dual_market_swing_portfolio_v7_supabase';
 
@@ -35,6 +36,7 @@ export default function HomePage() {
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'SCANNER' | 'HISTORY' | 'BACKTEST'>('DASHBOARD');
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+  const [addStockOpen, setAddStockOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   function showToast(msg: string) {
@@ -215,11 +217,14 @@ export default function HomePage() {
         onScan={handleScanMarket}
         isScanning={isScanning}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenAddStock={() => setAddStockOpen(true)}
         lastScanTime={dualState.lastScanTime}
         activeMarket={activeMarket}
         onSelectMarket={setActiveMarket}
         bistAuto={dualState.bist.autoTrade}
         usAuto={dualState.us.autoTrade}
+        bistEquity={dualState.bist.totalEquity}
+        usEquity={dualState.us.totalEquity}
         bistRegime={dualState.bistRegime}
         usRegime={dualState.usRegime}
       />
@@ -367,6 +372,7 @@ export default function HomePage() {
             results={scanResults}
             onOpenTrade={handleOpenPaperTrade}
             openPositionTickers={openPositionTickers}
+            onOpenAddStock={() => setAddStockOpen(true)}
           />
         )}
 
@@ -388,6 +394,16 @@ export default function HomePage() {
         usPortfolio={dualState.us}
         onSave={handleSaveSettings}
         onResetMarket={handleResetMarket}
+      />
+
+      <AddStockModal
+        isOpen={addStockOpen}
+        onClose={() => setAddStockOpen(false)}
+        defaultMarket={activeMarket}
+        onStockAdded={() => {
+          handleScanMarket();
+          showToast('Özel hisse başarıyla eklendi ve canlı taramaya dahil edildi.');
+        }}
       />
     </div>
   );

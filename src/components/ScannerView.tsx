@@ -8,12 +8,14 @@ interface ScannerViewProps {
   results: StockScanResult[];
   onOpenTrade: (signal: Signal) => void;
   openPositionTickers: string[];
+  onOpenAddStock?: () => void;
 }
 
 export const ScannerView: React.FC<ScannerViewProps> = ({
   results,
   onOpenTrade,
-  openPositionTickers
+  openPositionTickers,
+  onOpenAddStock
 }) => {
   const [selectedMarket, setSelectedMarket] = useState<'ALL' | MarketType>('ALL');
 
@@ -35,29 +37,41 @@ export const ScannerView: React.FC<ScannerViewProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-white">Canlı Piyasa Tarayıcısı</h2>
-          <p className="text-xs text-muted">ABD (NYSE/NASDAQ) ve Borsa İstanbul (BIST 30) likit hisselerinde swing fırsatları</p>
+          <p className="text-xs text-muted">200+ ABD ve Borsa İstanbul hissesinde canlı teknik analiz ve fırsatlar</p>
         </div>
 
-        {/* Market Filter Pills */}
-        <div className="flex items-center bg-card border border-border rounded-lg p-1 text-xs">
-          <button
-            onClick={() => setSelectedMarket('ALL')}
-            className={`px-3 py-1 rounded-md font-medium transition-colors ${selectedMarket === 'ALL' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            Tüm Piyasalar ({results.length})
-          </button>
-          <button
-            onClick={() => setSelectedMarket('BIST')}
-            className={`px-3 py-1 rounded-md font-medium transition-colors ${selectedMarket === 'BIST' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            🇹🇷 BIST 30 ({results.filter(r => r.market === 'BIST').length})
-          </button>
-          <button
-            onClick={() => setSelectedMarket('US')}
-            className={`px-3 py-1 rounded-md font-medium transition-colors ${selectedMarket === 'US' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            🇺🇸 ABD Borsası ({results.filter(r => r.market === 'US').length})
-          </button>
+        <div className="flex items-center gap-2">
+          {/* Market Filter Pills */}
+          <div className="flex items-center bg-card border border-border rounded-lg p-1 text-xs">
+            <button
+              onClick={() => setSelectedMarket('ALL')}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${selectedMarket === 'ALL' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+              Tüm Piyasalar ({results.length})
+            </button>
+            <button
+              onClick={() => setSelectedMarket('BIST')}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${selectedMarket === 'BIST' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+              🇹🇷 BIST ({results.filter(r => r.market === 'BIST').length})
+            </button>
+            <button
+              onClick={() => setSelectedMarket('US')}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${selectedMarket === 'US' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+              🇺🇸 ABD ({results.filter(r => r.market === 'US').length})
+            </button>
+          </div>
+
+          {onOpenAddStock && (
+            <button
+              onClick={onOpenAddStock}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 hover:text-white text-xs font-semibold transition-all cursor-pointer shadow-sm"
+            >
+              <span className="text-sm font-bold">+</span>
+              <span>Özel Hisse Ekle</span>
+            </button>
+          )}
         </div>
       </div>
 

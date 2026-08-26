@@ -472,14 +472,40 @@ export async function fetchMarketRegime(market: MarketType): Promise<MarketRegim
 }
 
 export async function scanUniverse(marketFilter: 'ALL' | 'US' | 'BIST' = 'ALL'): Promise<StockScanResult[]> {
-  const targetUniverse = marketFilter === 'US' 
-    ? US_UNIVERSE 
+  // 1. Base Universe
+  let baseUniverse = marketFilter === 'US' 
+    ? [...US_UNIVERSE]
     : marketFilter === 'BIST' 
-    ? BIST_UNIVERSE 
-    : COMBINED_UNIVERSE;
+    ? [...BIST_UNIVERSE]
+    : [...COMBINED_UNIVERSE];
 
+  // 2. Fetch & Merge Custom Stocks if configured
+  try {
+    const { isSupabaseConfigured, supabase } = await import('./supabaseClient');
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase
+        .from('portfolio_state')
+        .select('state')
+        .eq('id', 'custom_stocks')
+        .single();
+      if (data && data.state && Array.isArray(data.state)) {
+        const customList = data.state as UniverseItem[];
+        for (const item of customList) {
+          if (marketFilter === 'ALL' || item.market === marketFilter) {
+            if (!baseUniverse.some(u => u.ticker === item.ticker)) {
+              baseUniverse.push(item);
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  const targetUniverse = baseUniverse;
   const results: StockScanResult[] = [];
-  const chunkSize = 12;
+  const chunkSize = 15;
 
   for (let i = 0; i < targetUniverse.length; i += chunkSize) {
     const chunk = targetUniverse.slice(i, i + chunkSize);

@@ -8,11 +8,14 @@ interface HeaderProps {
   onScan: () => void;
   isScanning: boolean;
   onOpenSettings: () => void;
+  onOpenAddStock?: () => void;
   lastScanTime: string | null;
   activeMarket: MarketType;
   onSelectMarket: (m: MarketType) => void;
   bistAuto: boolean;
   usAuto: boolean;
+  bistEquity?: number;
+  usEquity?: number;
   bistRegime: MarketRegime | null;
   usRegime: MarketRegime | null;
 }
@@ -21,11 +24,14 @@ export const Header: React.FC<HeaderProps> = ({
   onScan,
   isScanning,
   onOpenSettings,
+  onOpenAddStock,
   lastScanTime,
   activeMarket,
   onSelectMarket,
   bistAuto,
   usAuto,
+  bistEquity = 10000,
+  usEquity = 500,
   bistRegime,
   usRegime
 }) => {
@@ -75,50 +81,67 @@ export const Header: React.FC<HeaderProps> = ({
   const currentRegime = activeMarket === 'BIST' ? bistRegime : usRegime;
 
   return (
-    <header className="border-b border-border bg-surface/90 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+    <header className="border-b border-border bg-surface/95 backdrop-blur-lg sticky top-0 z-40 px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4 shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-gradient-to-tr from-primary-600 to-accent-500 shadow-lg shadow-primary-500/20">
+        <div className="p-2.5 rounded-xl bg-gradient-to-tr from-emerald-500 via-primary-500 to-indigo-600 shadow-lg shadow-primary-500/25">
           <Activity className="w-5 h-5 text-white" />
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-bold text-lg text-white tracking-tight">Global & BIST Swing Bot</h1>
-            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-              <CloudLightning className="w-3 h-3 text-emerald-400" />
+            <h1 className="font-extrabold text-lg text-white tracking-tight">Global & BIST Swing Bot</h1>
+            <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Canlıda Aktif
             </span>
           </div>
-          <p className="text-xs text-muted">
-            🇹🇷 10.000 TL BIST & 🇺🇸 500$ ABD Güvenli Swing Botu
+          <p className="text-xs text-slate-400 font-medium">
+            🇹🇷 BIST (10:00-18:00) & 🇺🇸 NYSE/NASDAQ (16:30-23:00) Otomatik Ticaret
           </p>
         </div>
       </div>
 
-      <div className="flex items-center bg-card border border-border rounded-xl p-1 text-xs">
+      {/* Modern High-End Market Switcher */}
+      <div className="flex items-center bg-slate-900/90 border border-slate-700/80 rounded-2xl p-1.5 shadow-inner gap-1.5">
         <button
           onClick={() => onSelectMarket('BIST')}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
             activeMarket === 'BIST'
-              ? 'bg-red-500/20 text-red-400 border border-red-500/40 shadow-sm'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-gradient-to-r from-red-600/30 to-red-500/20 text-white border border-red-500/50 shadow-md shadow-red-500/10 scale-[1.02]'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
           }`}
         >
-          <span>🇹🇷 Borsa İstanbul</span>
-          <span className="text-[10px] opacity-80">(₺10.000)</span>
-          {bistAuto && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+          <span className="text-base leading-none">🇹🇷</span>
+          <div className="text-left">
+            <div className="flex items-center gap-1.5">
+              <span>Borsa İstanbul</span>
+              {bistAuto && <span className="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-500/30" />}
+            </div>
+            <div className="text-[10px] text-red-400 font-mono font-medium">
+              ₺{bistEquity.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
         </button>
+
+        <div className="w-px h-6 bg-slate-700/60" />
 
         <button
           onClick={() => onSelectMarket('US')}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
             activeMarket === 'US'
-              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40 shadow-sm'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-gradient-to-r from-blue-600/30 to-indigo-500/20 text-white border border-blue-500/50 shadow-md shadow-blue-500/10 scale-[1.02]'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
           }`}
         >
-          <span>🇺🇸 ABD Borsası</span>
-          <span className="text-[10px] opacity-80">($500)</span>
-          {usAuto && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+          <span className="text-base leading-none">🇺🇸</span>
+          <div className="text-left">
+            <div className="flex items-center gap-1.5">
+              <span>ABD Borsaları</span>
+              {usAuto && <span className="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-500/30" />}
+            </div>
+            <div className="text-[10px] text-blue-400 font-mono font-medium">
+              ${usEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
         </button>
       </div>
 
@@ -151,6 +174,17 @@ export const Header: React.FC<HeaderProps> = ({
           <span className={`w-2 h-2 rounded-full ${usStatus.isOpen ? 'bg-primary-500 animate-pulse' : 'bg-slate-500'}`} />
           <span>{usStatus.text}</span>
         </div>
+
+        {onOpenAddStock && (
+          <button
+            onClick={onOpenAddStock}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 hover:text-white text-xs font-semibold transition-all cursor-pointer shadow-sm"
+            title="Manuel Sembol / Hisse Ekle"
+          >
+            <span className="text-sm font-bold">+</span>
+            <span>Hisse Ekle</span>
+          </button>
+        )}
 
         <button
           onClick={onScan}
