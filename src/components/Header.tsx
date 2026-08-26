@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Activity, RefreshCw, Settings, CheckCircle2, Clock, CloudLightning, ShieldCheck, ShieldAlert, Bell, BellRing } from 'lucide-react';
+import { Activity, RefreshCw, Settings, CheckCircle2, Clock, CloudLightning, ShieldCheck, ShieldAlert, Bell, BellRing, Smartphone } from 'lucide-react';
 import { MarketRegime, MarketType } from '@/lib/types';
 import { requestNotificationPermission, getNotificationPermission } from '@/lib/notificationManager';
 
@@ -10,6 +10,7 @@ interface HeaderProps {
   isScanning: boolean;
   onOpenSettings: () => void;
   onOpenAddStock?: () => void;
+  onOpenInstall?: () => void;
   lastScanTime: string | null;
   activeMarket: MarketType;
   onSelectMarket: (m: MarketType) => void;
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   isScanning,
   onOpenSettings,
   onOpenAddStock,
+  onOpenInstall,
   lastScanTime,
   activeMarket,
   onSelectMarket,
@@ -249,6 +251,17 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
         </button>
+
+        {onOpenInstall && (
+          <button
+            onClick={onOpenInstall}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
+            title="Telefona Mobil Uygulama Olarak Yükle"
+          >
+            <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Uygulama İndir</span>
+          </button>
+        )}
 
         <button
           onClick={onOpenSettings}

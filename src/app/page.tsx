@@ -11,6 +11,7 @@ import { EquityChart } from '@/components/EquityChart';
 import { SettingsModal } from '@/components/SettingsModal';
 import { AddStockModal } from '@/components/AddStockModal';
 import { NewsView } from '@/components/NewsView';
+import { InstallPwaModal } from '@/components/InstallPwaModal';
 import { 
   DualPortfolioState, 
   MarketPortfolio,
@@ -39,6 +40,7 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'SCANNER' | 'NEWS' | 'HISTORY' | 'BACKTEST'>('DASHBOARD');
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [addStockOpen, setAddStockOpen] = useState<boolean>(false);
+  const [installModalOpen, setInstallModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   function showToast(msg: string) {
@@ -224,6 +226,7 @@ export default function HomePage() {
         isScanning={isScanning}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenAddStock={() => setAddStockOpen(true)}
+        onOpenInstall={() => setInstallModalOpen(true)}
         lastScanTime={dualState.lastScanTime}
         activeMarket={activeMarket}
         onSelectMarket={setActiveMarket}
@@ -430,6 +433,11 @@ export default function HomePage() {
           handleScanMarket();
           showToast('Özel hisse başarıyla eklendi ve canlı taramaya dahil edildi.');
         }}
+      />
+
+      <InstallPwaModal
+        isOpen={installModalOpen}
+        onClose={() => setInstallModalOpen(false)}
       />
     </div>
   );
