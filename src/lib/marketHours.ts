@@ -1,34 +1,44 @@
 export function isBISTOpen(): boolean {
   const now = new Date();
-  // Convert to Istanbul time (UTC+3)
-  const istanbulOffset = 3 * 60; // minutes
-  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-  const istanbulMinutes = utcMinutes + istanbulOffset;
-  
-  // BIST hours: 10:00-18:00 Istanbul time (Monday-Friday)
-  const dayOfWeek = now.getUTCDay();
-  // Adjust day for timezone
-  const istanbulHour = Math.floor(istanbulMinutes / 60) % 24;
-  
-  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-  const isMarketHours = istanbulMinutes >= 600 && istanbulMinutes <= 1080; // 10:00-18:00
-  
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Istanbul',
+    weekday: 'short',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+  });
+  const parts = formatter.formatToParts(now);
+  const weekday = parts.find(p => p.type === 'weekday')?.value || '';
+  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+  const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+  const totalMinutes = hour * 60 + minute;
+
+  const isWeekday = !['Sat', 'Sun'].includes(weekday);
+  // BIST trading hours: 10:00 to 18:00 Istanbul time (600 to 1080 mins)
+  const isMarketHours = totalMinutes >= 600 && totalMinutes < 1080;
+
   return isWeekday && isMarketHours;
 }
 
 export function isUSOpen(): boolean {
   const now = new Date();
-  // Convert to New York time (UTC-4 during EDT, UTC-5 during EST)
-  // Simplified: use UTC-4 (EDT, most of the trading year)
-  const nyOffset = -4 * 60; // minutes
-  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-  const nyMinutes = ((utcMinutes + nyOffset) % 1440 + 1440) % 1440;
-  
-  const dayOfWeek = now.getUTCDay();
-  
-  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-  const isMarketHours = nyMinutes >= 570 && nyMinutes <= 960; // 9:30-16:00
-  
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+  });
+  const parts = formatter.formatToParts(now);
+  const weekday = parts.find(p => p.type === 'weekday')?.value || '';
+  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+  const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+  const totalMinutes = hour * 60 + minute;
+
+  const isWeekday = !['Sat', 'Sun'].includes(weekday);
+  // US Regular Trading Hours: 09:30 to 16:00 Eastern Time (570 to 960 mins)
+  const isMarketHours = totalMinutes >= 570 && totalMinutes < 960;
+
   return isWeekday && isMarketHours;
 }
 

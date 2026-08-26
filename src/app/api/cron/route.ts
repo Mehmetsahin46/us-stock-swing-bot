@@ -48,13 +48,14 @@ export async function GET() {
       await saveTradeToHistory(trade);
     }
 
-    // Auto-Trade for BIST
-    if (dualState.bist.autoTrade) {
+    // Auto-Trade for BIST (Only when BIST market is actually open: 10:00 - 18:00 Istanbul time)
+    const bistOpen = isBISTOpen();
+    if (dualState.bist.autoTrade && bistOpen) {
       const bistSignals: Signal[] = scanResults
-        .filter(r => r.market === 'BIST' && r.signal !== null && r.signal.score >= 65 && r.signal.riskReward >= 1.5)
+        .filter(r => r.market === 'BIST' && r.signal !== null && r.signal.score >= 70 && r.signal.riskReward >= 1.5)
         .map(r => r.signal as Signal)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 4); // Max 4 best signals
+        .slice(0, 3); // Max 3 best signals per cycle
 
       for (const sig of bistSignals) {
         const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.bist);
@@ -70,15 +71,18 @@ export async function GET() {
           });
         }
       }
+    } else if (!bistOpen) {
+      logs.push('[BIST] Piyasa kapali (10:00-18:00 arasi acik) - yeni alim yapilmadi.');
     }
 
-    // Auto-Trade for US
-    if (dualState.us.autoTrade) {
+    // Auto-Trade for US (Only when US market is actually open: 09:30 - 16:00 NY time / 16:30 - 23:00 TSI)
+    const usOpen = isUSOpen();
+    if (dualState.us.autoTrade && usOpen) {
       const usSignals: Signal[] = scanResults
-        .filter(r => r.market === 'US' && r.signal !== null && r.signal.score >= 65 && r.signal.riskReward >= 1.5)
+        .filter(r => r.market === 'US' && r.signal !== null && r.signal.score >= 70 && r.signal.riskReward >= 1.5)
         .map(r => r.signal as Signal)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 4); // Max 4 best signals
+        .slice(0, 3); // Max 3 best signals per cycle
 
       for (const sig of usSignals) {
         const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.us);
@@ -94,6 +98,8 @@ export async function GET() {
           });
         }
       }
+    } else if (!usOpen) {
+      logs.push('[US] Piyasa kapali (16:30-23:00 TSI arasi acik) - yeni alim yapilmadi.');
     }
 
     dualState.activityLogs = dualState.activityLogs.slice(0, 50);
