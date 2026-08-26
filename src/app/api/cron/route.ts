@@ -48,62 +48,52 @@ export async function GET() {
       await saveTradeToHistory(trade);
     }
 
-    // Auto-Trade for BIST (Only when BIST market is open)
-    const bistOpen = isBISTOpen();
-    if (dualState.bist.autoTrade && bistOpen) {
+    // Auto-Trade for BIST
+    if (dualState.bist.autoTrade) {
       const bistSignals: Signal[] = scanResults
-        .filter(r => r.market === 'BIST' && r.signal !== null && r.signal.score >= 72 && r.signal.riskReward >= 1.8)
+        .filter(r => r.market === 'BIST' && r.signal !== null && r.signal.score >= 65 && r.signal.riskReward >= 1.5)
         .map(r => r.signal as Signal)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 3); // Max 3 new positions per scan cycle
+        .slice(0, 4); // Max 4 best signals
 
       for (const sig of bistSignals) {
-        if (sig.score >= 72) {
-          const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.bist);
-          if (success) {
-            dualState.bist = afterTrade;
-            logs.push(`[BIST AUTO] ${message}`);
-            dualState.activityLogs.unshift({
-              id: `log_${Date.now()}_${sig.ticker}`,
-              timestamp: startTime,
-              market: 'BIST',
-              message,
-              type: 'BUY'
-            });
-          }
+        const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.bist);
+        if (success) {
+          dualState.bist = afterTrade;
+          logs.push(`[BIST AUTO] ${message}`);
+          dualState.activityLogs.unshift({
+            id: `log_${Date.now()}_${sig.ticker}`,
+            timestamp: startTime,
+            market: 'BIST',
+            message,
+            type: 'BUY'
+          });
         }
       }
-    } else if (!bistOpen) {
-      logs.push('[BIST] Piyasa kapali - yeni alim yapilmadi.');
     }
 
-    // Auto-Trade for US (Only when US market is open)
-    const usOpen = isUSOpen();
-    if (dualState.us.autoTrade && usOpen) {
+    // Auto-Trade for US
+    if (dualState.us.autoTrade) {
       const usSignals: Signal[] = scanResults
-        .filter(r => r.market === 'US' && r.signal !== null && r.signal.score >= 72 && r.signal.riskReward >= 1.8)
+        .filter(r => r.market === 'US' && r.signal !== null && r.signal.score >= 65 && r.signal.riskReward >= 1.5)
         .map(r => r.signal as Signal)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 3); // Max 3 new positions per scan cycle
+        .slice(0, 4); // Max 4 best signals
 
       for (const sig of usSignals) {
-        if (sig.score >= 72) {
-          const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.us);
-          if (success) {
-            dualState.us = afterTrade;
-            logs.push(`[US AUTO] ${message}`);
-            dualState.activityLogs.unshift({
-              id: `log_${Date.now()}_${sig.ticker}`,
-              timestamp: startTime,
-              market: 'US',
-              message,
-              type: 'BUY'
-            });
-          }
+        const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.us);
+        if (success) {
+          dualState.us = afterTrade;
+          logs.push(`[US AUTO] ${message}`);
+          dualState.activityLogs.unshift({
+            id: `log_${Date.now()}_${sig.ticker}`,
+            timestamp: startTime,
+            market: 'US',
+            message,
+            type: 'BUY'
+          });
         }
       }
-    } else if (!usOpen) {
-      logs.push('[US] Piyasa kapali - yeni alim yapilmadi.');
     }
 
     dualState.activityLogs = dualState.activityLogs.slice(0, 50);
