@@ -1,4 +1,4 @@
-import { Candle, TechnicalIndicators, UniverseFilterConfig, DynamicUniverseStatus, UniverseRevisionLog, MarketType } from './types';
+import { Candle, TechnicalIndicators, UniverseFilterConfig, DynamicUniverseStatus, UniverseRevisionLog, MarketType, Signal } from './types';
 import { BIST_UNIVERSE, US_UNIVERSE, UniverseItem, fetchStockCandles, calculateTechnicals } from './marketData';
 
 export const DEFAULT_UNIVERSE_CONFIG: UniverseFilterConfig = {
@@ -10,6 +10,9 @@ export const DEFAULT_UNIVERSE_CONFIG: UniverseFilterConfig = {
   gracefulExitActivePositions: true // Kriterden düşen hissede açık pozisyon korunur, sadece yeni alım engellenir
 };
 
+// 💾 ÇİFT KATMANLI ÖNBELLEK (TWO-TIER CACHE):
+// 1. Katman (ADV20 & Evren Kriterleri): Günde 1 Kez (24 Saat TTL)
+// 2. Katman (Anlık Fiyat & Sinyal): 10 Dakika TTL
 interface DynamicCache {
   status: DynamicUniverseStatus;
   filteredBistUniverse: UniverseItem[];
@@ -18,11 +21,11 @@ interface DynamicCache {
 }
 
 let universeCache: DynamicCache | null = null;
-const CACHE_TTL_HOURS = 24;
+const CACHE_TTL_HOURS = 24; // ADV20 günde 1 kez hesaplanır
 const revisionLogs: UniverseRevisionLog[] = [];
 
 /**
- * 🔬 DİNAMİK KUANT EVRENİ DERLEYİCİSİ (ADV20 Rolling + IPO Bar Count + %25 Sector Cap)
+ * 🔬 DİNAMİK KUANT EVRENİ DERLEYİCİSİ (Günde 1 kez Rolling ADV20 + Bar Count IPO + %25 Sector Cap)
  */
 export async function getDynamicQuantUniverse(forceRebalance: boolean = false): Promise<{
   bistUniverse: UniverseItem[];
@@ -48,7 +51,6 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
   const validBist: UniverseItem[] = [];
   const validUs: UniverseItem[] = [];
 
-  // Sektör sayaçları (Max %25 Cap Koruması)
   const bistSectorCounts: Record<string, number> = {};
   const usSectorCounts: Record<string, number> = {};
 
@@ -59,7 +61,7 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
   for (const item of BIST_UNIVERSE) {
     const candles = await fetchStockCandles(item.ticker, '6mo');
     
-    // 🛡️ IPO Kuralı: Gerçek işlem görmüş geçerli bar sayısı >= 60 olmalı
+    // 🛡️ Bar Count IPO Guard: Geçerli günlük mum sayısı >= 60 olmalı
     if (candles.length < DEFAULT_UNIVERSE_CONFIG.minTradingDaysIPO) {
       rejectedByIPOAge++;
       continue;
@@ -71,7 +73,7 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
       continue;
     }
 
-    // 🛡️ Rolling 20-Günlük Ortalama İşlem Hacmi (ADV20 * Fiyat >= 40M TL)
+    // 🛡️ Rolling 20-Günlük Hacim Eşiği (ADV20 * Fiyat >= 40M TL)
     const dailyTurnoverTRY = tech.avgVolume20 * tech.price;
     if (dailyTurnoverTRY < DEFAULT_UNIVERSE_CONFIG.bistMinDailyTurnoverTRY) {
       rejectedByADV++;
@@ -93,7 +95,7 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
   for (const item of US_UNIVERSE) {
     const candles = await fetchStockCandles(item.ticker, '6mo');
 
-    // 🛡️ IPO Kuralı: Gerçek işlem görmüş geçerli bar sayısı >= 60 olmalı
+    // 🛡️ Bar Count IPO Guard: Geçerli günlük mum sayısı >= 60 olmalı
     if (candles.length < DEFAULT_UNIVERSE_CONFIG.minTradingDaysIPO) {
       rejectedByIPOAge++;
       continue;
@@ -111,7 +113,7 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
       continue;
     }
 
-    // 🛡️ Rolling 20-Günlük Ortalama Lot Hacmi (ADV20 >= 1.5M Lot)
+    // 🛡️ Rolling 20-Günlük Lot Hacmi (ADV20 >= 1.5M Lot)
     if (tech.avgVolume20 < DEFAULT_UNIVERSE_CONFIG.usMinADVLot) {
       rejectedByADV++;
       continue;
@@ -128,14 +130,14 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
     validUs.push(item);
   }
 
-  // 📜 Revizyon Günlüğü Oluştur
+  // 📜 Revizyon Günlüğü
   const newLog: UniverseRevisionLog = {
     id: `rev_${Date.now()}`,
     revisionDate: new Date().toISOString(),
     market: 'ALL',
     addedTickers: [],
     removedTickers: [],
-    reason: 'Çeyreklik/Periyodik Rolling ADV20, IPO Bar Count & %25 Sektör Tavanı Revizyonu',
+    reason: 'Günlük ADV20 & Çeyreklik Kuant Evreni Revizyonu (%25 Sektör Tavanı & IPO Guard)',
     totalActiveCount: validBist.length + validUs.length
   };
   revisionLogs.unshift(newLog);
@@ -160,6 +162,9 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
     timestamp: now
   };
 
+  // 🔄 Supabase Senkronizasyonu (Arka planda çalıştır)
+  syncUniverseToSupabase(validBist, validUs, newLog).catch(() => {});
+
   return {
     bistUniverse: validBist,
     usUniverse: validUs,
@@ -169,10 +174,27 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
 }
 
 /**
- * 🛡️ GRANDFATHERING / GRACEFUL EXIT KURALI:
- * Eğer kullanıcıda açık bir pozisyon varsa (örn. GARAN), ama çeyreklik revizyonda hacmi düşüp evrenden çıktıysa:
- * - Pozisyon zorla kapatılmaz (take-profit / stop-loss beklenir).
- * - Ancak sisteme YENİ bir pozisyon açılmasına izin verilmez!
+ * 🛡️ KARANTİNA & EVREN REVİZYONU EDGE-CASE ÇÖZÜCÜSÜ (Race Condition Guard):
+ * Eğer bir sinyal karantinada doğrulama beklerken o hisse evren revizyonundan düşerse:
+ * - Doğrulama süreci usulünce tamamlanır.
+ * - Ancak alım kilitlenir (allowNewBuys = false).
+ */
+export function resolveQuarantineSignalOnEviction(signal: Signal, activeUniverse: UniverseItem[]): Signal {
+  const isInUniverse = activeUniverse.some(u => u.ticker === signal.ticker);
+  if (!isInUniverse) {
+    return {
+      ...signal,
+      isQuarantined: false,
+      quarantineReason: '⚠️ Evren Revizyonu Kriteri Karşılanamadı (Yeni Alım Kilitli)',
+      quarantineExpiresInSeconds: 0
+    };
+  }
+  return signal;
+}
+
+/**
+ * 🛡️ GRANDFATHERING / GRACEFUL EXIT:
+ * Açık pozisyondaki hisse kriterden düşse bile kapatılmaz; sadece YENİ pozisyon açılması engellenir.
  */
 export function canOpenNewTradeForTicker(ticker: string, activeUniverse: UniverseItem[]): boolean {
   return activeUniverse.some(u => u.ticker === ticker);
@@ -193,4 +215,43 @@ export function getCachedUniverseStatus(): DynamicUniverseStatus {
     rejectedBySectorCap: 0,
     revisionLogs
   };
+}
+
+/**
+ * 🗄️ SUPABASE UNIVERSE STATE & AUDIT LOGGER
+ */
+async function syncUniverseToSupabase(
+  bistList: UniverseItem[],
+  usList: UniverseItem[],
+  log: UniverseRevisionLog
+): Promise<void> {
+  try {
+    const { isSupabaseConfigured, supabase } = await import('./supabaseClient');
+    if (!isSupabaseConfigured || !supabase) return;
+
+    // 1. Save revision log
+    await supabase.from('universe_revision_log').insert({
+      id: log.id,
+      revision_date: log.revisionDate,
+      market: log.market,
+      added_symbols: log.addedTickers,
+      removed_symbols: log.removedTickers,
+      reason: log.reason,
+      active_count: log.totalActiveCount
+    });
+
+    // 2. Save active universe snapshot
+    await supabase.from('portfolio_state').upsert({
+      id: 'active_quant_universe',
+      state: {
+        bist: bistList,
+        us: usList,
+        lastUpdated: new Date().toISOString()
+      },
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'id' });
+
+  } catch (err) {
+    console.warn('[SupabaseUniverseSync] Error saving universe snapshot:', err);
+  }
 }
