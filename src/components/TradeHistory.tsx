@@ -1,14 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { TradePosition } from '@/lib/types';
-import { CheckCircle2, XCircle, Clock, Award } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Award, Search, X } from 'lucide-react';
 
 interface TradeHistoryProps {
   history: TradePosition[];
 }
 
 export const TradeHistory: React.FC<TradeHistoryProps> = ({ history }) => {
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
   if (history.length === 0) {
     return (
       <div className="p-8 rounded-xl bg-card border border-border text-center text-muted text-xs">
@@ -16,6 +18,17 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ history }) => {
       </div>
     );
   }
+
+  const filteredHistory = history.filter(h => {
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toUpperCase();
+      const tickerMatch = h.displayTicker.toUpperCase().includes(q) || h.ticker.toUpperCase().includes(q);
+      const strategyMatch = h.strategy.toUpperCase().includes(q);
+      const reasonMatch = (h.exitReason || '').toUpperCase().includes(q);
+      return tickerMatch || strategyMatch || reasonMatch;
+    }
+    return true;
+  });
 
   const winningCount = history.filter(h => h.realizedPnL > 0).length;
   const totalPnL = history.reduce((sum, h) => sum + h.realizedPnL, 0);
@@ -33,16 +46,35 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ history }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-xs">
-          <div>
-            <span className="text-muted">Kazanma Oranı:</span>{' '}
-            <span className="font-bold text-primary-400">%{((winningCount / history.length) * 100).toFixed(1)}</span>
+        <div className="flex items-center gap-4 text-xs flex-wrap">
+          {/* Search Box */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-border text-xs w-full sm:w-56 focus-within:border-primary-500 transition-colors">
+            <Search className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Geçmişte Hisse Ara..."
+              className="bg-transparent text-white placeholder-slate-500 text-xs outline-none w-full"
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
-          <div>
-            <span className="text-muted">Net K/Z:</span>{' '}
-            <span className={`font-bold ${totalPnL >= 0 ? 'text-primary-400' : 'text-danger-400'}`}>
-              {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)}
-            </span>
+
+          <div className="flex items-center gap-4">
+            <div>
+              <span className="text-muted">Kazanma Oranı:</span>{' '}
+              <span className="font-bold text-primary-400">%{((winningCount / history.length) * 100).toFixed(1)}</span>
+            </div>
+            <div>
+              <span className="text-muted">Net K/Z:</span>{' '}
+              <span className={`font-bold ${totalPnL >= 0 ? 'text-primary-400' : 'text-danger-400'}`}>
+                {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -60,7 +92,7 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ history }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-border/50">
-            {history.map((trade) => {
+            {filteredHistory.map((trade) => {
               const isWin = trade.realizedPnL > 0;
               const currSign = trade.currency === 'TRY' ? '₺' : '$';
 

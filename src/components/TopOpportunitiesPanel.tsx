@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { StockScanResult, Signal } from '@/lib/types';
-import { Flame, Sparkles, TrendingUp, Zap, Clock, ShieldCheck, HelpCircle, ArrowRight, ShoppingCart } from 'lucide-react';
+import { Flame, Sparkles, TrendingUp, Zap, Clock, ShieldCheck, HelpCircle, ArrowRight, ShoppingCart, Search, X } from 'lucide-react';
 
 interface TopOpportunitiesPanelProps {
   results: StockScanResult[];
@@ -12,16 +12,28 @@ interface TopOpportunitiesPanelProps {
 
 export const TopOpportunitiesPanel: React.FC<TopOpportunitiesPanelProps> = ({ results, onOpenTrade, onOpenDetail }) => {
   const [activeMarket, setActiveMarket] = useState<'BIST' | 'US'>('BIST');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Filter signals and sort by score & grade
   const signalsWithResults = results
-    .filter(r => r.signal !== null && r.market === activeMarket)
+    .filter(r => {
+      if (r.signal === null || r.market !== activeMarket) return false;
+      if (searchTerm.trim()) {
+        const q = searchTerm.trim().toUpperCase();
+        const tickerMatch = r.displayTicker.toUpperCase().includes(q) || r.ticker.toUpperCase().includes(q);
+        const nameMatch = r.name.toUpperCase().includes(q);
+        const sectorMatch = (r as any).sector?.toUpperCase().includes(q);
+        const titleMatch = r.signal.title.toUpperCase().includes(q);
+        return tickerMatch || nameMatch || sectorMatch || titleMatch;
+      }
+      return true;
+    })
     .map(r => ({
       result: r,
       signal: r.signal as Signal
     }))
     .sort((a, b) => b.signal.score - a.signal.score)
-    .slice(0, 8); // Top 8 best opportunities
+    .slice(0, 12); // Top 12 best opportunities
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -45,24 +57,44 @@ export const TopOpportunitiesPanel: React.FC<TopOpportunitiesPanelProps> = ({ re
           </p>
         </div>
 
-        {/* Market Switcher */}
-        <div className="flex items-center bg-card border border-border rounded-xl p-1 text-xs">
-          <button
-            onClick={() => setActiveMarket('BIST')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
-              activeMarket === 'BIST' ? 'bg-red-500/30 text-white border border-red-500/50 shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <span>🇹🇷 Borsa İstanbul</span>
-          </button>
-          <button
-            onClick={() => setActiveMarket('US')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
-              activeMarket === 'US' ? 'bg-blue-500/30 text-white border border-blue-500/50 shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <span>🇺🇸 ABD Borsaları</span>
-          </button>
+        {/* Right Controls: Search + Market Switcher */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Search Box */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border border-border text-xs w-full sm:w-52 focus-within:border-amber-500 transition-colors">
+            <Search className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Fırsatlarda Hisse Ara..."
+              className="bg-transparent text-white placeholder-slate-500 text-xs outline-none w-full"
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Market Switcher */}
+          <div className="flex items-center bg-card border border-border rounded-xl p-1 text-xs">
+            <button
+              onClick={() => setActiveMarket('BIST')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
+                activeMarket === 'BIST' ? 'bg-red-500/30 text-white border border-red-500/50 shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🇹🇷 BIST</span>
+            </button>
+            <button
+              onClick={() => setActiveMarket('US')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
+                activeMarket === 'US' ? 'bg-blue-500/30 text-white border border-blue-500/50 shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🇺🇸 ABD</span>
+            </button>
+          </div>
         </div>
       </div>
 

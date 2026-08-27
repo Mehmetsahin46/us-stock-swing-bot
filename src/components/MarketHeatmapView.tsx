@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { StockScanResult, SectorType } from '@/lib/types';
-import { LayoutGrid, TrendingUp, TrendingDown, Layers, Zap, ShoppingCart } from 'lucide-react';
+import { LayoutGrid, TrendingUp, TrendingDown, Layers, Zap, ShoppingCart, Search, X } from 'lucide-react';
 
 interface MarketHeatmapViewProps {
   results: StockScanResult[];
@@ -12,8 +12,19 @@ interface MarketHeatmapViewProps {
 export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, onOpenTrade }) => {
   const [selectedMarket, setSelectedMarket] = useState<'BIST' | 'US'>('BIST');
   const [colorMode, setColorMode] = useState<'CHANGE' | 'SCORE'>('CHANGE');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
-  const marketResults = results.filter(r => r.market === selectedMarket);
+  const marketResults = results.filter(r => {
+    if (r.market !== selectedMarket) return false;
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toUpperCase();
+      const tickerMatch = r.displayTicker.toUpperCase().includes(q) || r.ticker.toUpperCase().includes(q);
+      const nameMatch = r.name.toUpperCase().includes(q);
+      const sectorMatch = r.sector.toUpperCase().includes(q);
+      return tickerMatch || nameMatch || sectorMatch;
+    }
+    return true;
+  });
 
   // Group by sector
   const sectorsMap = new Map<SectorType, StockScanResult[]>();
@@ -60,8 +71,25 @@ export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, o
           </p>
         </div>
 
-        {/* Filters */}
+        {/* Filters & Search */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
+          {/* Search Box */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border border-border text-xs w-full sm:w-56 focus-within:border-indigo-500 transition-colors">
+            <Search className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Haritada Hisse Ara..."
+              className="bg-transparent text-white placeholder-slate-500 text-xs outline-none w-full"
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           {/* Market Switcher */}
           <div className="flex items-center bg-card border border-border rounded-xl p-1">
             <button
@@ -70,7 +98,7 @@ export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, o
                 selectedMarket === 'BIST' ? 'bg-red-500/30 text-white border border-red-500/50' : 'text-slate-400 hover:text-white'
               }`}
             >
-              🇹🇷 BIST
+              🇹🇷 BIST ({results.filter(r => r.market === 'BIST').length})
             </button>
             <button
               onClick={() => setSelectedMarket('US')}
@@ -78,7 +106,7 @@ export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, o
                 selectedMarket === 'US' ? 'bg-blue-500/30 text-white border border-blue-500/50' : 'text-slate-400 hover:text-white'
               }`}
             >
-              🇺🇸 ABD
+              🇺🇸 ABD ({results.filter(r => r.market === 'US').length})
             </button>
           </div>
 
@@ -90,7 +118,7 @@ export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, o
                 colorMode === 'CHANGE' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
               }`}
             >
-              📈 Fiyat Değişimi %
+              📈 Değişim %
             </button>
             <button
               onClick={() => setColorMode('SCORE')}
@@ -98,7 +126,7 @@ export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, o
                 colorMode === 'SCORE' ? 'bg-amber-500/30 text-amber-300' : 'text-slate-400 hover:text-white'
               }`}
             >
-              ⭐ Kuant Skoru
+              ⭐ Skor
             </button>
           </div>
         </div>

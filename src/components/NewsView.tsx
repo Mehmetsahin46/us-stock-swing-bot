@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { StockScanResult, MarketType, Signal, StockNewsItem } from '@/lib/types';
-import { Newspaper, Sparkles, TrendingUp, AlertTriangle, ExternalLink, Filter, Building2, Zap, Clock, ShieldCheck } from 'lucide-react';
+import { Newspaper, Sparkles, TrendingUp, AlertTriangle, ExternalLink, Filter, Building2, Zap, Clock, ShieldCheck, Search, X } from 'lucide-react';
 
 interface NewsViewProps {
   results: StockScanResult[];
@@ -12,6 +12,7 @@ interface NewsViewProps {
 export const NewsView: React.FC<NewsViewProps> = ({ results, onOpenTrade }) => {
   const [selectedMarket, setSelectedMarket] = useState<'ALL' | MarketType>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<'ALL' | 'BILANCO' | 'YATIRIM' | 'SOZLESME' | 'ANALIST'>('ALL');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Collect all news from results
   const allNews: Array<StockNewsItem & { resultRef: StockScanResult }> = [];
@@ -30,6 +31,13 @@ export const NewsView: React.FC<NewsViewProps> = ({ results, onOpenTrade }) => {
   const filteredNews = allNews.filter((item) => {
     if (selectedMarket !== 'ALL' && item.resultRef.market !== selectedMarket) return false;
     if (selectedCategory !== 'ALL' && item.category !== selectedCategory) return false;
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toUpperCase();
+      const tickerMatch = item.displayTicker.toUpperCase().includes(q) || item.ticker.toUpperCase().includes(q);
+      const titleMatch = item.title.toUpperCase().includes(q);
+      const summaryMatch = item.summary.toUpperCase().includes(q);
+      return tickerMatch || titleMatch || summaryMatch;
+    }
     return true;
   });
 
@@ -85,8 +93,25 @@ export const NewsView: React.FC<NewsViewProps> = ({ results, onOpenTrade }) => {
           </p>
         </div>
 
-        {/* Filters */}
+        {/* Filters & Search */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Search Box */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border border-border text-xs w-full sm:w-56 focus-within:border-indigo-500 transition-colors">
+            <Search className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Haber / Hisse Ara..."
+              className="bg-transparent text-white placeholder-slate-500 text-xs outline-none w-full"
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           {/* Market Filter */}
           <div className="flex items-center bg-card border border-border rounded-xl p-1 text-xs">
             <button
@@ -103,7 +128,7 @@ export const NewsView: React.FC<NewsViewProps> = ({ results, onOpenTrade }) => {
                 selectedMarket === 'BIST' ? 'bg-red-500/30 text-white border border-red-500/50' : 'text-slate-400 hover:text-white'
               }`}
             >
-              🇹🇷 BIST ({allNews.filter(n => n.resultRef.market === 'BIST').length})
+              🇹🇷 BIST
             </button>
             <button
               onClick={() => setSelectedMarket('US')}
@@ -111,7 +136,7 @@ export const NewsView: React.FC<NewsViewProps> = ({ results, onOpenTrade }) => {
                 selectedMarket === 'US' ? 'bg-blue-500/30 text-white border border-blue-500/50' : 'text-slate-400 hover:text-white'
               }`}
             >
-              🇺🇸 ABD ({allNews.filter(n => n.resultRef.market === 'US').length})
+              🇺🇸 ABD
             </button>
           </div>
 

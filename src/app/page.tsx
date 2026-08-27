@@ -444,6 +444,16 @@ export default function HomePage() {
               <span>Backtest</span>
             </button>
           </div>
+
+          {/* Quick Universal Search Trigger */}
+          <button
+            onClick={() => setSearchModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-all cursor-pointer flex-shrink-0 shadow-sm"
+          >
+            <Search className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden sm:inline">Hisse / Sembol Ara</span>
+            <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono">⌘K</kbd>
+          </button>
         </div>
 
         {/* TAB 1: DASHBOARD */}

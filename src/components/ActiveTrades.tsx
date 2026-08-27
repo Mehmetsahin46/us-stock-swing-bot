@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { TradePosition } from '@/lib/types';
-import { Clock, Target, AlertOctagon, XCircle, ArrowUpRight, ArrowDownRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Clock, Target, AlertOctagon, XCircle, ArrowUpRight, ArrowDownRight, ShieldCheck, CheckCircle2, Search, X } from 'lucide-react';
 
 interface ActiveTradesProps {
   positions: TradePosition[];
@@ -10,9 +10,19 @@ interface ActiveTradesProps {
 }
 
 export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualClose }) => {
-  const openPositions = positions.filter(p => p.status === 'OPEN');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
-  if (openPositions.length === 0) {
+  const openPositions = positions
+    .filter(p => p.status === 'OPEN')
+    .filter(p => {
+      if (searchTerm.trim()) {
+        const q = searchTerm.trim().toUpperCase();
+        return p.displayTicker.toUpperCase().includes(q) || p.ticker.toUpperCase().includes(q) || p.strategy.toUpperCase().includes(q);
+      }
+      return true;
+    });
+
+  if (positions.filter(p => p.status === 'OPEN').length === 0) {
     return (
       <div className="p-8 rounded-xl bg-card border border-border text-center">
         <div className="inline-flex p-3 rounded-full bg-slate-800 text-slate-400 mb-3">
@@ -27,19 +37,43 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <table className="w-full text-left text-xs border-collapse">
-        <thead>
-          <tr className="border-b border-border/80 bg-surface/50 text-muted font-medium">
-            <th className="py-3 px-4">Hisse & Strateji</th>
-            <th className="py-3 px-4">Giriş / Anlık</th>
-            <th className="py-3 px-4">Kalan Lot / Maliyet</th>
-            <th className="py-3 px-4">Kâr / Zarar (PnL)</th>
-            <th className="py-3 px-4">Güvenlik & Seviyeler</th>
-            <th className="py-3 px-4">Vade Süresi</th>
-            <th className="py-3 px-4 text-right">İşlem</th>
-          </tr>
-        </thead>
+    <div className="space-y-3">
+      {/* Top Search Bar for Active Trades */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs text-muted">
+          <span>Açık Pozisyonlar: <strong>{openPositions.length}</strong></span>
+        </div>
+
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border border-border text-xs w-full sm:w-64 focus-within:border-primary-500 transition-colors">
+          <Search className="w-3.5 h-3.5 text-muted flex-shrink-0" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Açık Pozisyonlarda Hisse Ara..."
+            className="bg-transparent text-white placeholder-slate-500 text-xs outline-none w-full"
+          />
+          {searchTerm && (
+            <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr className="border-b border-border/80 bg-surface/50 text-muted font-medium">
+              <th className="py-3 px-4">Hisse & Strateji</th>
+              <th className="py-3 px-4">Giriş / Anlık</th>
+              <th className="py-3 px-4">Kalan Lot / Maliyet</th>
+              <th className="py-3 px-4">Kâr / Zarar (PnL)</th>
+              <th className="py-3 px-4">Güvenlik & Seviyeler</th>
+              <th className="py-3 px-4">Vade Süresi</th>
+              <th className="py-3 px-4 text-right">İşlem</th>
+            </tr>
+          </thead>
         <tbody className="divide-y divide-border/50">
           {openPositions.map((pos) => {
             const isProfit = pos.unrealizedPnL >= 0;
@@ -160,5 +194,6 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
         </tbody>
       </table>
     </div>
+  </div>
   );
 };
