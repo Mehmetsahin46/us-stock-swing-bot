@@ -21,6 +21,7 @@ import { SystemHealthModal } from '@/components/SystemHealthModal';
 import { DailyReportModal } from '@/components/DailyReportModal';
 import { NotificationRulesModal } from '@/components/NotificationRulesModal';
 import { SecurityCenterModal } from '@/components/SecurityCenterModal';
+import { StockSearchModal } from '@/components/StockSearchModal';
 import { 
   DualPortfolioState, 
   MarketPortfolio,
@@ -49,7 +50,8 @@ import {
   Flame,
   BarChart3,
   LayoutGrid,
-  Star
+  Star,
+  Search
 } from 'lucide-react';
 
 const STORAGE_KEY = 'dual_market_swing_portfolio_v7_supabase';
@@ -65,6 +67,7 @@ export default function HomePage() {
     'DASHBOARD' | 'TOP_OPPORTUNITIES' | 'SCANNER' | 'HEATMAP' | 'SIGNAL_ANALYTICS' | 'NEWS' | 'WATCHLIST' | 'HISTORY' | 'BACKTEST'
   >('DASHBOARD');
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+  const [searchModalOpen, setSearchModalOpen] = useState<boolean>(false);
   const [addStockOpen, setAddStockOpen] = useState<boolean>(false);
   const [installModalOpen, setInstallModalOpen] = useState<boolean>(false);
   const [detailModalOpen, setDetailModalOpen] = useState<boolean>(false);
@@ -197,7 +200,20 @@ export default function HomePage() {
         handleScanMarket();
       }
     }, 30000);
-    return () => clearInterval(interval);
+
+    // 🔍 Ctrl+K / Cmd+K Global Search Shortcut
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchModalOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const currentPortfolio: MarketPortfolio = activeMarket === 'BIST' ? dualState.bist : dualState.us;
@@ -253,7 +269,7 @@ export default function HomePage() {
           us: activeMarket === 'US' ? newPort : prev.us,
           activityLogs: [
             {
-              id: `log_${Date.now()}_close`,
+              id: `log_${Date.now()}_${positionId}`,
               timestamp: new Date().toISOString(),
               market: activeMarket,
               message,
@@ -286,6 +302,7 @@ export default function HomePage() {
         onScan={handleScanMarket}
         isScanning={isScanning}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSearch={() => setSearchModalOpen(true)}
         onOpenAddStock={() => setAddStockOpen(true)}
         onOpenInstall={() => setInstallModalOpen(true)}
         onOpenHealth={() => setHealthModalOpen(true)}
@@ -597,6 +614,18 @@ export default function HomePage() {
       <SecurityCenterModal
         isOpen={securityModalOpen}
         onClose={() => setSecurityModalOpen(false)}
+      />
+
+      <StockSearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        scanResults={scanResults}
+        onOpenTrade={handleOpenPaperTrade}
+        onOpenDetail={(sig, res) => {
+          setSelectedSignal(sig);
+          setSelectedResult(res);
+          setDetailModalOpen(true);
+        }}
       />
     </div>
   );

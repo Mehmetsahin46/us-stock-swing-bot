@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { StockScanResult, Signal, MarketType } from '@/lib/types';
-import { TrendingUp, Flame, ShoppingCart, Check } from 'lucide-react';
+import { TrendingUp, Flame, ShoppingCart, Check, Search, X } from 'lucide-react';
 
 interface ScannerViewProps {
   results: StockScanResult[];
@@ -18,10 +18,18 @@ export const ScannerView: React.FC<ScannerViewProps> = ({
   onOpenAddStock
 }) => {
   const [selectedMarket, setSelectedMarket] = useState<'ALL' | MarketType>('ALL');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   const filteredResults = results.filter(r => {
-    if (selectedMarket === 'ALL') return true;
-    return r.market === selectedMarket;
+    if (selectedMarket !== 'ALL' && r.market !== selectedMarket) return false;
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toUpperCase();
+      const tickerMatch = r.displayTicker.toUpperCase().includes(q) || r.ticker.toUpperCase().includes(q);
+      const nameMatch = r.name.toUpperCase().includes(q);
+      const sectorMatch = (r as any).sector?.toUpperCase().includes(q);
+      return tickerMatch || nameMatch || sectorMatch;
+    }
+    return true;
   });
 
   if (results.length === 0) {
@@ -40,14 +48,31 @@ export const ScannerView: React.FC<ScannerViewProps> = ({
           <p className="text-xs text-muted">200+ ABD ve Borsa İstanbul hissesinde canlı teknik analiz ve fırsatlar</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Search Box */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border text-xs w-full sm:w-64 focus-within:border-primary-500 transition-colors">
+            <Search className="w-3.5 h-3.5 text-muted flex-shrink-0" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Listede Hisse / Sembol Ara..."
+              className="bg-transparent text-white placeholder-slate-500 text-xs outline-none w-full"
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           {/* Market Filter Pills */}
           <div className="flex items-center bg-card border border-border rounded-lg p-1 text-xs">
             <button
               onClick={() => setSelectedMarket('ALL')}
               className={`px-3 py-1 rounded-md font-medium transition-colors ${selectedMarket === 'ALL' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
             >
-              Tüm Piyasalar ({results.length})
+              Tümü ({results.length})
             </button>
             <button
               onClick={() => setSelectedMarket('BIST')}

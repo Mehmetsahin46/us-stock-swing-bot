@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Activity, RefreshCw, Settings, CheckCircle2, Clock, CloudLightning, ShieldCheck, ShieldAlert, Bell, BellRing, Smartphone, HeartPulse, FileText, Sliders } from 'lucide-react';
+import { Activity, RefreshCw, Settings, CheckCircle2, Clock, CloudLightning, ShieldCheck, ShieldAlert, Bell, BellRing, Smartphone, HeartPulse, FileText, Sliders, Search } from 'lucide-react';
 import { MarketRegime, MarketType } from '@/lib/types';
 import { requestNotificationPermission, getNotificationPermission } from '@/lib/notificationManager';
 
@@ -9,6 +9,7 @@ interface HeaderProps {
   onScan: () => void;
   isScanning: boolean;
   onOpenSettings: () => void;
+  onOpenSearch?: () => void;
   onOpenAddStock?: () => void;
   onOpenInstall?: () => void;
   onOpenHealth?: () => void;
@@ -30,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   onScan,
   isScanning,
   onOpenSettings,
+  onOpenSearch,
   onOpenAddStock,
   onOpenInstall,
   onOpenHealth,
@@ -138,6 +140,18 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Action Buttons */}
       <div className="flex items-center gap-2">
+        {onOpenSearch && (
+          <button
+            onClick={onOpenSearch}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-indigo-500/20 active:scale-95"
+            title="500+ Hisse ve Sembol Ara"
+          >
+            <Search className="w-3.5 h-3.5 text-indigo-300" />
+            <span>Hisse Ara</span>
+            <kbd className="hidden sm:inline-block text-[9px] px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 font-mono">⌘K</kbd>
+          </button>
+        )}
+
         {onOpenHealth && (
           <button
             onClick={onOpenHealth}
