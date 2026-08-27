@@ -1,12 +1,13 @@
-import { Candle, TechnicalIndicators, UniverseFilterConfig, DynamicUniverseStatus } from './types';
+import { Candle, TechnicalIndicators, UniverseFilterConfig, DynamicUniverseStatus, UniverseRevisionLog, MarketType } from './types';
 import { BIST_UNIVERSE, US_UNIVERSE, UniverseItem, fetchStockCandles, calculateTechnicals } from './marketData';
 
 export const DEFAULT_UNIVERSE_CONFIG: UniverseFilterConfig = {
-  bistMinDailyTurnoverTRY: 40_000_000, // 40 Milyon TL ortalama günlük hacim (ADV20 * Fiyat)
-  usMinADVLot: 1_500_000, // 1.5 Milyon lot ortalama günlük hacim
+  bistMinDailyTurnoverTRY: 40_000_000, // 40 Milyon TL ortalama günlük hacim (Rolling ADV20 * Fiyat)
+  usMinADVLot: 1_500_000, // 1.5 Milyon lot ortalama günlük hacim (Rolling ADV20)
   usMinPriceUSD: 5.00, // 5 USD altı penny stock'lar elenir
-  minTradingDaysIPO: 60, // IPO sonrası en az 60 işlem günü geçmiş olmalı
-  maxSectorWeightPct: 35 // Bir sektörün evrendeki max ağırlığı %35
+  minTradingDaysIPO: 60, // IPO sonrası en az 60 işlem görmüş mum (Bar Count Doğrulaması)
+  maxSectorWeightPct: 25, // Tek bir sektör evrenin max %25'ini geçemez (GICS & KAP standardı)
+  gracefulExitActivePositions: true // Kriterden düşen hissede açık pozisyon korunur, sadece yeni alım engellenir
 };
 
 interface DynamicCache {
@@ -17,8 +18,12 @@ interface DynamicCache {
 }
 
 let universeCache: DynamicCache | null = null;
-const CACHE_TTL_HOURS = 24; // Günlük tazeleme, çeyreklik kalıcı revizyon
+const CACHE_TTL_HOURS = 24;
+const revisionLogs: UniverseRevisionLog[] = [];
 
+/**
+ * 🔬 DİNAMİK KUANT EVRENİ DERLEYİCİSİ (ADV20 Rolling + IPO Bar Count + %25 Sector Cap)
+ */
 export async function getDynamicQuantUniverse(forceRebalance: boolean = false): Promise<{
   bistUniverse: UniverseItem[];
   usUniverse: UniverseItem[];
@@ -35,19 +40,26 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
     };
   }
 
-  // 🔬 DİNAMİK YENİDEN HESAPLAMA (REBALANCE PROCESS)
   let rejectedByADV = 0;
   let rejectedByPrice = 0;
   let rejectedByIPOAge = 0;
+  let rejectedBySectorCap = 0;
 
   const validBist: UniverseItem[] = [];
   const validUs: UniverseItem[] = [];
+
+  // Sektör sayaçları (Max %25 Cap Koruması)
+  const bistSectorCounts: Record<string, number> = {};
+  const usSectorCounts: Record<string, number> = {};
+
+  const maxBistPerSector = Math.ceil(BIST_UNIVERSE.length * (DEFAULT_UNIVERSE_CONFIG.maxSectorWeightPct / 100)); // ~35 hisse
+  const maxUsPerSector = Math.ceil(US_UNIVERSE.length * (DEFAULT_UNIVERSE_CONFIG.maxSectorWeightPct / 100)); // ~90 hisse
 
   // 1. 🇹🇷 BIST Filtreleme
   for (const item of BIST_UNIVERSE) {
     const candles = await fetchStockCandles(item.ticker, '6mo');
     
-    // IPO Soğuma Kuralı: En az 60 işlem günü (mum sayısı)
+    // 🛡️ IPO Kuralı: Gerçek işlem görmüş geçerli bar sayısı >= 60 olmalı
     if (candles.length < DEFAULT_UNIVERSE_CONFIG.minTradingDaysIPO) {
       rejectedByIPOAge++;
       continue;
@@ -59,13 +71,21 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
       continue;
     }
 
-    // 20 Günlük Ortalama İşlem Hacmi (ADV20 * Fiyat >= 40-50M TL)
+    // 🛡️ Rolling 20-Günlük Ortalama İşlem Hacmi (ADV20 * Fiyat >= 40M TL)
     const dailyTurnoverTRY = tech.avgVolume20 * tech.price;
     if (dailyTurnoverTRY < DEFAULT_UNIVERSE_CONFIG.bistMinDailyTurnoverTRY) {
       rejectedByADV++;
       continue;
     }
 
+    // 🛡️ Sektör Tavanı (%25 Cap)
+    const currentSectorCount = bistSectorCounts[item.sector] || 0;
+    if (currentSectorCount >= maxBistPerSector) {
+      rejectedBySectorCap++;
+      continue;
+    }
+
+    bistSectorCounts[item.sector] = currentSectorCount + 1;
     validBist.push(item);
   }
 
@@ -73,7 +93,7 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
   for (const item of US_UNIVERSE) {
     const candles = await fetchStockCandles(item.ticker, '6mo');
 
-    // IPO Soğuma Kuralı: En az 60 işlem günü
+    // 🛡️ IPO Kuralı: Gerçek işlem görmüş geçerli bar sayısı >= 60 olmalı
     if (candles.length < DEFAULT_UNIVERSE_CONFIG.minTradingDaysIPO) {
       rejectedByIPOAge++;
       continue;
@@ -85,20 +105,41 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
       continue;
     }
 
-    // Fiyat Tabanı: $5.00 altı Penny Stock'lar elenir
+    // 🛡️ Fiyat Tabanı: $5.00 altı Penny Stock'lar elenir
     if (tech.price < DEFAULT_UNIVERSE_CONFIG.usMinPriceUSD) {
       rejectedByPrice++;
       continue;
     }
 
-    // 20 Günlük Ortalama Lot Hacmi (ADV20 >= 1.5M Lot)
+    // 🛡️ Rolling 20-Günlük Ortalama Lot Hacmi (ADV20 >= 1.5M Lot)
     if (tech.avgVolume20 < DEFAULT_UNIVERSE_CONFIG.usMinADVLot) {
       rejectedByADV++;
       continue;
     }
 
+    // 🛡️ Sektör Tavanı (%25 Cap)
+    const currentSectorCount = usSectorCounts[item.sector] || 0;
+    if (currentSectorCount >= maxUsPerSector) {
+      rejectedBySectorCap++;
+      continue;
+    }
+
+    usSectorCounts[item.sector] = currentSectorCount + 1;
     validUs.push(item);
   }
+
+  // 📜 Revizyon Günlüğü Oluştur
+  const newLog: UniverseRevisionLog = {
+    id: `rev_${Date.now()}`,
+    revisionDate: new Date().toISOString(),
+    market: 'ALL',
+    addedTickers: [],
+    removedTickers: [],
+    reason: 'Çeyreklik/Periyodik Rolling ADV20, IPO Bar Count & %25 Sektör Tavanı Revizyonu',
+    totalActiveCount: validBist.length + validUs.length
+  };
+  revisionLogs.unshift(newLog);
+  if (revisionLogs.length > 20) revisionLogs.pop();
 
   const status: DynamicUniverseStatus = {
     lastRebalancedAt: new Date().toISOString(),
@@ -107,7 +148,9 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
     approvedUsCount: validUs.length,
     rejectedByADV,
     rejectedByPrice,
-    rejectedByIPOAge
+    rejectedByIPOAge,
+    rejectedBySectorCap,
+    revisionLogs
   };
 
   universeCache = {
@@ -125,6 +168,16 @@ export async function getDynamicQuantUniverse(forceRebalance: boolean = false): 
   };
 }
 
+/**
+ * 🛡️ GRANDFATHERING / GRACEFUL EXIT KURALI:
+ * Eğer kullanıcıda açık bir pozisyon varsa (örn. GARAN), ama çeyreklik revizyonda hacmi düşüp evrenden çıktıysa:
+ * - Pozisyon zorla kapatılmaz (take-profit / stop-loss beklenir).
+ * - Ancak sisteme YENİ bir pozisyon açılmasına izin verilmez!
+ */
+export function canOpenNewTradeForTicker(ticker: string, activeUniverse: UniverseItem[]): boolean {
+  return activeUniverse.some(u => u.ticker === ticker);
+}
+
 export function getCachedUniverseStatus(): DynamicUniverseStatus {
   if (universeCache) {
     return universeCache.status;
@@ -136,6 +189,8 @@ export function getCachedUniverseStatus(): DynamicUniverseStatus {
     approvedUsCount: US_UNIVERSE.length,
     rejectedByADV: 0,
     rejectedByPrice: 0,
-    rejectedByIPOAge: 0
+    rejectedByIPOAge: 0,
+    rejectedBySectorCap: 0,
+    revisionLogs
   };
 }

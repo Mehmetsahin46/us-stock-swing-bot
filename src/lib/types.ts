@@ -59,11 +59,22 @@ export interface StockNewsItem {
 }
 
 export interface UniverseFilterConfig {
-  bistMinDailyTurnoverTRY: number; // örn: 50.000.000 TL (ADV20 * Fiyat)
-  usMinADVLot: number; // örn: 2.000.000 lot (ADV20)
-  usMinPriceUSD: number; // örn: 5.00 USD (Penny stock koruması)
-  minTradingDaysIPO: number; // örn: 60 işlem günü (IPO soğuma kuralı)
-  maxSectorWeightPct: number; // örn: %30 (Tek sektöre aşırı yığılma koruması)
+  bistMinDailyTurnoverTRY: number; // 40.000.000 TL (Rolling ADV20 * Fiyat)
+  usMinADVLot: number; // 1.500.000 lot (Rolling ADV20)
+  usMinPriceUSD: number; // 5.00 USD (Penny stock koruması)
+  minTradingDaysIPO: number; // 60 geçerli işlem günü (IPO Bar Count Doğrulaması)
+  maxSectorWeightPct: number; // %25 (Evren seviyesinde tek sektör tavanı)
+  gracefulExitActivePositions: boolean; // Düşen hissenin mevcut pozisyonunu koru, yeni alım açma
+}
+
+export interface UniverseRevisionLog {
+  id: string;
+  revisionDate: string;
+  market: MarketType | 'ALL';
+  addedTickers: string[];
+  removedTickers: string[];
+  reason: string;
+  totalActiveCount: number;
 }
 
 export interface DynamicUniverseStatus {
@@ -74,6 +85,8 @@ export interface DynamicUniverseStatus {
   rejectedByADV: number;
   rejectedByPrice: number;
   rejectedByIPOAge: number;
+  rejectedBySectorCap: number;
+  revisionLogs?: UniverseRevisionLog[];
 }
 
 export interface StockScanResult {
