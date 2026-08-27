@@ -5,6 +5,7 @@ export type SectorType =
   | 'Technology' 
   | 'Semiconductors' 
   | 'Banking' 
+  | 'Healthcare'
   | 'Aviation' 
   | 'Energy' 
   | 'Retail' 
