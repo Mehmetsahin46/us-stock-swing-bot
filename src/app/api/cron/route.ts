@@ -36,6 +36,11 @@ export async function GET() {
     dualState.bistRegime = bistRegime;
     dualState.usRegime = usRegime;
 
+    // 🔄 DİNAMİK KUANT EVRENİ REVİZYONU (Quarterly / Periodic Rebalancing)
+    const { getDynamicQuantUniverse } = await import('@/lib/universeManager');
+    // Günde bir kez otomatik rebalance kontrolü
+    await getDynamicQuantUniverse(false);
+
     // Sadece açık olan piyasanın hisselerini tara!
     const marketFilter = bistOpen && usOpen ? 'ALL' : bistOpen ? 'BIST' : 'US';
     const scanResults = await scanUniverse(marketFilter);

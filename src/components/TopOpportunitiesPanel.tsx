@@ -28,7 +28,7 @@ export const TopOpportunitiesPanel: React.FC<TopOpportunitiesPanelProps> = ({ re
       {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-900/90 border border-slate-800 rounded-2xl shadow-lg">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Flame className="w-5 h-5 text-amber-400" />
             <h2 className="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
               <span>Günün En Güçlü Fırsatları (Top Opportunities)</span>
@@ -36,9 +36,12 @@ export const TopOpportunitiesPanel: React.FC<TopOpportunitiesPanelProps> = ({ re
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
               A+ & A Sınıfı Kuant Seçimleri
             </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40" title="20 Günlük ADV Hacmi, Fiyat Tabanı ve IPO Kalkanı ile filtrelenmiş dinamik evren">
+              🛡️ Dinamik Kuant Evreni (ADV + IPO Korumalı)
+            </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            200+ hisse arasından teknik güç, kurumsal hacim ve bilanço/haber katalizörlerinin birleştiği en yüksek potansiyelli fırsatlar.
+            500+ kurumsal hisse arasından 20 Günlük ADV ortalama hacim, $5+ fiyat tabanı ve IPO soğuma kalkanı uygulanarak elenen likit fırsatlar.
           </p>
         </div>
 

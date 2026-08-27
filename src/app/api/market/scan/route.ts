@@ -38,6 +38,9 @@ export async function GET(request: NextRequest) {
       return r;
     });
 
+    const { getCachedUniverseStatus } = await import('@/lib/universeManager');
+    const dynamicUniverseStatus = getCachedUniverseStatus();
+
     return NextResponse.json({
       success: true,
       market: marketFilter,
@@ -47,6 +50,7 @@ export async function GET(request: NextRequest) {
       quarantinedCount: quarantinedSignals.length,
       anomalyDetected,
       alertMessage,
+      dynamicUniverseStatus,
       results: sanitizedResults
     });
   } catch (error) {

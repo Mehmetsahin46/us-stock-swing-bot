@@ -58,6 +58,24 @@ export interface StockNewsItem {
   impactScore: number; // e.g. +15 for earnings beat, +10 for contract, -20 for downgrade
 }
 
+export interface UniverseFilterConfig {
+  bistMinDailyTurnoverTRY: number; // örn: 50.000.000 TL (ADV20 * Fiyat)
+  usMinADVLot: number; // örn: 2.000.000 lot (ADV20)
+  usMinPriceUSD: number; // örn: 5.00 USD (Penny stock koruması)
+  minTradingDaysIPO: number; // örn: 60 işlem günü (IPO soğuma kuralı)
+  maxSectorWeightPct: number; // örn: %30 (Tek sektöre aşırı yığılma koruması)
+}
+
+export interface DynamicUniverseStatus {
+  lastRebalancedAt: string;
+  totalCandidates: number;
+  approvedBistCount: number;
+  approvedUsCount: number;
+  rejectedByADV: number;
+  rejectedByPrice: number;
+  rejectedByIPOAge: number;
+}
+
 export interface StockScanResult {
   ticker: string;
   displayTicker: string;
