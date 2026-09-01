@@ -46,39 +46,61 @@ export function openPositionForMarket(
     return { portfolio: currentPortfolio, success: false, message: `${signal.sector} sekt\u00f6r\u00fcnden zaten ${sameSectorCount} a\u00e7\u0131k pozisyon var.` };
   }
 
-  const minReserve = portfolio.totalEquity * 0.01;
-  if (portfolio.cash <= minReserve) {
-    return { portfolio: currentPortfolio, success: false, message: 'Yeterli nakit rezervi yok.' };
-  }
-
-  // 🎯 DİNAMİK GÜVEN TAHSİSİ (Dynamic Conviction Sizing)
-  // Sinyal kalitesine ve haber katalizörüne göre kademeli bütçe ayırma:
-  // - Skor >= 90: %25 Sermaye (A+ Elit Fırsat - Yüksek Kazanç Hedefi)
-  // - Skor >= 80: %16 Sermaye (Güçlü Trend / Hacimli Kırılım)
-  // - Skor < 80:  %10 Sermaye (Standart Fırsat)
-  let capitalRatio = 0.10;
-  if (signal.score >= 90) {
-    capitalRatio = 0.25;
-  } else if (signal.score >= 80) {
-    capitalRatio = 0.16;
-  }
-
-  const maxCapitalPerPosition = Math.max(signal.suggestedEntry, portfolio.totalEquity * capitalRatio);
-  const sharesFromCapitalCap = Math.floor(maxCapitalPerPosition / signal.suggestedEntry);
-
-  let shares = sharesFromCapitalCap;
-  if (shares <= 0) shares = 1;
-
-  let totalCost = shares * signal.suggestedEntry;
-
+  // 🛡️ 1. MİNİMUM %25 NAKİT REZERVİ KALKANI (Cash Buffer Protection)
+  // Portföyün en az %25'i nakitte tutulur, tüm bakiye hisseye/coine bağlanamaz!
+  const minReserve = portfolio.totalEquity * 0.25;
   const availableCash = portfolio.cash - minReserve;
-  if (totalCost > availableCash) {
-    shares = Math.floor(availableCash / signal.suggestedEntry);
-    totalCost = shares * signal.suggestedEntry;
+
+  if (availableCash <= 0) {
+    return { 
+      portfolio: currentPortfolio, 
+      success: false, 
+      message: `⚠️ Nakit Rezervi Kalkanı Devrede: Portföyün %25'i (en az ${portfolio.currencySymbol}${minReserve.toFixed(2)}) nakit olarak korunuyor. Yeni işlem açılamaz.` 
+    };
+  }
+
+  // 🎯 2. DENGELİ VE KORUMACI POZİSYON BOYUTLANDIRMASI (Max %8 - %10 Sizing Cap)
+  // Tek bir hisseye/coine sermayenin en fazla %8-%10'u verilir:
+  // - Skor >= 90 (A+ Elit): %10 Sermaye
+  // - Skor >= 80 (A Güçlü): %8 Sermaye
+  // - Standart Sinyal:      %6 Sermaye
+  // - Kripto Piyasası:      %5 Sermaye (Yüksek volatilite kalkanı)
+  let capitalRatio = 0.06;
+  if (signal.market === 'CRYPTO') {
+    capitalRatio = 0.05; // Kripto için max %5
+  } else if (signal.score >= 90) {
+    capitalRatio = 0.10; // A+ hisse için max %10
+  } else if (signal.score >= 80) {
+    capitalRatio = 0.08; // A hisse için max %8
+  }
+
+  const targetCapital = Math.min(availableCash, portfolio.totalEquity * capitalRatio);
+  
+  let shares = 0;
+  let totalCost = 0;
+
+  if (signal.market === 'CRYPTO') {
+    // Kripto için kesirli coin alımı (örn: 0.015 BTC, 1.25 SOL)
+    shares = Number((targetCapital / signal.suggestedEntry).toFixed(4));
+    totalCost = Number((shares * signal.suggestedEntry).toFixed(2));
+    if (totalCost > availableCash) {
+      shares = Number((availableCash / signal.suggestedEntry).toFixed(4));
+      totalCost = Number((shares * signal.suggestedEntry).toFixed(2));
+    }
+  } else {
+    // BIST ve ABD Hisseleri için tam adet
+    const sharesFromCap = Math.floor(targetCapital / signal.suggestedEntry);
+    shares = sharesFromCap > 0 ? sharesFromCap : 1;
+    totalCost = Number((shares * signal.suggestedEntry).toFixed(2));
+
+    if (totalCost > availableCash) {
+      shares = Math.floor(availableCash / signal.suggestedEntry);
+      totalCost = Number((shares * signal.suggestedEntry).toFixed(2));
+    }
   }
 
   if (shares <= 0 || totalCost <= 0) {
-    return { portfolio: currentPortfolio, success: false, message: 'Pozisyon a\u00e7mak i\u00e7in yeterli nakit bakiye yok.' };
+    return { portfolio: currentPortfolio, success: false, message: 'Pozisyon açmak için yeterli nakit rezervi yok (En az %25 nakit korunuyor).' };
   }
 
   portfolio.cash = Math.max(0, Number((portfolio.cash - totalCost).toFixed(2)));

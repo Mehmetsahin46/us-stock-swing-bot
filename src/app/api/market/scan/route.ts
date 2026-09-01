@@ -7,8 +7,8 @@ export const revalidate = 0;
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const marketParam = (searchParams.get('market') || 'ALL').toUpperCase() as 'ALL' | 'US' | 'BIST';
-    const marketFilter = ['US', 'BIST'].includes(marketParam) ? marketParam : 'ALL';
+    const marketParam = (searchParams.get('market') || 'ALL').toUpperCase() as 'ALL' | 'US' | 'BIST' | 'CRYPTO';
+    const marketFilter = ['US', 'BIST', 'CRYPTO'].includes(marketParam) ? marketParam : 'ALL';
 
     const results = await scanUniverse(marketFilter);
     const rawSignals = results.map(r => r.signal).filter((s): s is NonNullable<typeof s> => s !== null);

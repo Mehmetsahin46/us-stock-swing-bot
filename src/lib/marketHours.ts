@@ -92,21 +92,28 @@ export function isSessionMuteActive(market: 'BIST' | 'US'): { isMuted: boolean; 
   return { isMuted: false };
 }
 
-export function isAnyMarketOpen(): boolean {
-  return isBISTOpen() || isUSOpen();
+export function isCryptoOpen(): boolean {
+  return true; // Kripto para piyasaları 7 gün 24 saat kesintisiz açıktır
 }
 
-export function getMarketStatus(): { bistOpen: boolean; usOpen: boolean; message: string } {
+export function isAnyMarketOpen(): boolean {
+  return isBISTOpen() || isUSOpen() || isCryptoOpen();
+}
+
+export function getMarketStatus(): { bistOpen: boolean; usOpen: boolean; cryptoOpen: boolean; message: string } {
   const bistOpen = isBISTOpen();
   const usOpen = isUSOpen();
+  const cryptoOpen = isCryptoOpen();
   
-  if (bistOpen && usOpen) {
-    return { bistOpen, usOpen, message: 'BIST ve ABD piyasaları açık.' };
-  } else if (bistOpen) {
-    return { bistOpen, usOpen, message: 'BIST açık, ABD kapalı.' };
-  } else if (usOpen) {
-    return { bistOpen, usOpen, message: 'ABD açık, BIST kapalı.' };
-  } else {
-    return { bistOpen, usOpen, message: 'Tüm piyasalar kapalı. Sadece mevcut pozisyonlar güncelleniyor.' };
-  }
+  const openMarkets: string[] = [];
+  if (bistOpen) openMarkets.push('🇹🇷 BIST');
+  if (usOpen) openMarkets.push('🇺🇸 ABD');
+  if (cryptoOpen) openMarkets.push('🪙 Kripto (7/24)');
+
+  return {
+    bistOpen,
+    usOpen,
+    cryptoOpen,
+    message: `${openMarkets.join(', ')} açık ve aktif.`
+  };
 }

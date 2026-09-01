@@ -520,7 +520,53 @@ export const US_UNIVERSE: UniverseItem[] = [
   { ticker: 'HST', displayTicker: 'HST', name: 'Host Hotels & Resorts', sector: 'RealEstate', market: 'US', currency: 'USD' }
 ];
 
-export const COMBINED_UNIVERSE: UniverseItem[] = [...BIST_UNIVERSE, ...US_UNIVERSE];
+// 🪙 35 SEÇKİN VE YÜKSEK LİKİDİTELİ KRİPTO PARA HAVUZU (7/24 PİYASA)
+export const CRYPTO_UNIVERSE: UniverseItem[] = [
+  // 1. Layer 1 & Bluechips
+  { ticker: 'BTC-USD', displayTicker: 'BTC', name: 'Bitcoin', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'ETH-USD', displayTicker: 'ETH', name: 'Ethereum', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'SOL-USD', displayTicker: 'SOL', name: 'Solana', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'BNB-USD', displayTicker: 'BNB', name: 'Binance Coin', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'XRP-USD', displayTicker: 'XRP', name: 'Ripple', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'ADA-USD', displayTicker: 'ADA', name: 'Cardano', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'AVAX-USD', displayTicker: 'AVAX', name: 'Avalanche', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'SUI20947-USD', displayTicker: 'SUI', name: 'Sui Network', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'NEAR-USD', displayTicker: 'NEAR', name: 'NEAR Protocol', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'DOT-USD', displayTicker: 'DOT', name: 'Polkadot', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'APT21794-USD', displayTicker: 'APT', name: 'Aptos', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'TRX-USD', displayTicker: 'TRX', name: 'TRON', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'TON11419-USD', displayTicker: 'TON', name: 'Toncoin', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'ICP-USD', displayTicker: 'ICP', name: 'Internet Computer', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'KAS-USD', displayTicker: 'KAS', name: 'Kaspa', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'LTC-USD', displayTicker: 'LTC', name: 'Litecoin', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+
+  // 2. AI & Data & DePIN Crypto
+  { ticker: 'TAO22974-USD', displayTicker: 'TAO', name: 'Bittensor', sector: 'Technology', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'RENDER-USD', displayTicker: 'RENDER', name: 'Render Network', sector: 'Technology', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'FET-USD', displayTicker: 'FET', name: 'Artificial Superintelligence', sector: 'Technology', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'INJ-USD', displayTicker: 'INJ', name: 'Injective', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'LINK-USD', displayTicker: 'LINK', name: 'Chainlink', sector: 'Technology', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'FIL-USD', displayTicker: 'FIL', name: 'Filecoin', sector: 'Technology', market: 'CRYPTO', currency: 'USDT' },
+
+  // 3. DeFi & Layer 2
+  { ticker: 'UNI7083-USD', displayTicker: 'UNI', name: 'Uniswap', sector: 'Banking', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'AAVE-USD', displayTicker: 'AAVE', name: 'Aave', sector: 'Banking', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'ARB11841-USD', displayTicker: 'ARB', name: 'Arbitrum', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'OP-USD', displayTicker: 'OP', name: 'Optimism', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'TIA22861-USD', displayTicker: 'TIA', name: 'Celestia', sector: 'Technology', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'POL-USD', displayTicker: 'POL', name: 'Polygon', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'LDO-USD', displayTicker: 'LDO', name: 'Lido DAO', sector: 'Banking', market: 'CRYPTO', currency: 'USDT' },
+
+  // 4. Memes & High-Momentum
+  { ticker: 'DOGE-USD', displayTicker: 'DOGE', name: 'Dogecoin', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'SHIB-USD', displayTicker: 'SHIB', name: 'Shiba Inu', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'PEPE24478-USD', displayTicker: 'PEPE', name: 'Pepe', sector: 'Crypto/Fintech', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'XLM-USD', displayTicker: 'XLM', name: 'Stellar', sector: 'Banking', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'HBAR-USD', displayTicker: 'HBAR', name: 'Hedera', sector: 'Technology', market: 'CRYPTO', currency: 'USDT' },
+  { ticker: 'ATOM-USD', displayTicker: 'ATOM', name: 'Cosmos Hub', sector: 'Technology', market: 'CRYPTO', currency: 'USDT' }
+];
+
+export const COMBINED_UNIVERSE: UniverseItem[] = [...BIST_UNIVERSE, ...US_UNIVERSE, ...CRYPTO_UNIVERSE];
 
 // 💾 10 DAKİKALIK AKILLI BELLEK ÖNBELLEĞİ (RATE LIMIT KALKANI)
 const candleMemoryCache = new Map<string, { candles: Candle[]; cachedAt: number }>();
@@ -692,7 +738,7 @@ export function calculateTechnicals(candles: Candle[]): TechnicalIndicators | nu
 }
 
 export async function fetchMarketRegime(market: MarketType): Promise<MarketRegime> {
-  const ticker = market === 'BIST' ? 'XU100.IS' : '^GSPC';
+  const ticker = market === 'BIST' ? 'XU100.IS' : market === 'CRYPTO' ? 'BTC-USD' : '^GSPC';
   const candles = await fetchStockCandles(ticker, '6mo');
   if (candles.length < 50) {
     return {
@@ -704,7 +750,7 @@ export async function fetchMarketRegime(market: MarketType): Promise<MarketRegim
       changePercent: 0,
       rsi14: 50,
       allowNewBuys: true,
-      reason: 'Endeks verisi hazırlanıyor.'
+      reason: market === 'CRYPTO' ? 'Bitcoin verisi hazırlanıyor.' : 'Endeks verisi hazırlanıyor.'
     };
   }
 
@@ -727,18 +773,22 @@ export async function fetchMarketRegime(market: MarketType): Promise<MarketRegim
     changePercent,
     rsi14,
     allowNewBuys,
-    reason: isBullish ? 'Endeks 50 EMA üzerinde, alım stratejileri aktif.' : 'Endeks 50 EMA altında, savunmacı mod devrede.'
+    reason: market === 'CRYPTO'
+      ? (isBullish ? 'Bitcoin 50 EMA üzerinde, altcoin & swing alımları aktif.' : 'Bitcoin 50 EMA altında, savunmacı mod devrede.')
+      : (isBullish ? 'Endeks 50 EMA üzerinde, alım stratejileri aktif.' : 'Endeks 50 EMA altında, savunmacı mod devrede.')
   };
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // ⚡ 15'ERLİ PAKETLEME (CHUNKED CONCURRENCY POOL) - Rate Limit Önleyici
-export async function scanUniverse(marketFilter: 'ALL' | 'US' | 'BIST' = 'ALL'): Promise<StockScanResult[]> {
+export async function scanUniverse(marketFilter: 'ALL' | 'US' | 'BIST' | 'CRYPTO' = 'ALL'): Promise<StockScanResult[]> {
   let baseUniverse = marketFilter === 'US'
     ? [...US_UNIVERSE]
     : marketFilter === 'BIST'
     ? [...BIST_UNIVERSE]
+    : marketFilter === 'CRYPTO'
+    ? [...CRYPTO_UNIVERSE]
     : [...COMBINED_UNIVERSE];
 
   // Supabase Custom Stocks

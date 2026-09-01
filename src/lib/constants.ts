@@ -54,11 +54,39 @@ export const INITIAL_US_PORTFOLIO: MarketPortfolio = {
   equityCurve: [{ date: today, equity: 500 }]
 };
 
+export const INITIAL_CRYPTO_PORTFOLIO: MarketPortfolio = {
+  market: 'CRYPTO',
+  currency: 'USDT',
+  currencySymbol: '₮',
+  initialBalance: 1000,
+  cash: 1000,
+  totalEquity: 1000,
+  realizedPnL: 0,
+  unrealizedPnL: 0,
+  winRate: 0,
+  totalTrades: 0,
+  winningTrades: 0,
+  losingTrades: 0,
+  profitFactor: 0,
+  riskPerTradePct: 3.5,
+  maxOpenPositions: 10,
+  maxHoldingDays: 30,
+  autoTrade: true,
+  useMarketRegimeFilter: false,
+  useBreakevenTrailing: true,
+  usePartialTakeProfit: true,
+  positions: [],
+  history: [],
+  equityCurve: [{ date: today, equity: 1000 }]
+};
+
 export const INITIAL_DUAL_STATE: DualPortfolioState = {
   bist: INITIAL_BIST_PORTFOLIO,
   us: INITIAL_US_PORTFOLIO,
+  crypto: INITIAL_CRYPTO_PORTFOLIO,
   bistRegime: null,
   usRegime: null,
+  cryptoRegime: null,
   lastScanTime: null,
   lastCronTime: null,
   activityLogs: []

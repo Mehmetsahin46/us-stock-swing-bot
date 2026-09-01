@@ -111,11 +111,11 @@ export const Header: React.FC<HeaderProps> = ({
           </p>
         </div>
 
-        {/* Global Market Switcher */}
+        {/* Global Market Switcher (3 Piyasalı) */}
         <div className="flex items-center bg-card border border-border rounded-xl p-0.5 text-xs ml-1 sm:ml-3">
           <button
             onClick={() => onSelectMarket('BIST')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
               activeMarket === 'BIST'
                 ? 'bg-red-500/30 text-white border border-red-500/50 shadow-sm'
                 : 'text-muted hover:text-white'
@@ -126,7 +126,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
           <button
             onClick={() => onSelectMarket('US')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
               activeMarket === 'US'
                 ? 'bg-blue-500/30 text-white border border-blue-500/50 shadow-sm'
                 : 'text-muted hover:text-white'
@@ -134,6 +134,17 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <span className={`w-2 h-2 rounded-full ${usStatus.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
             <span>🇺🇸 ABD</span>
+          </button>
+          <button
+            onClick={() => onSelectMarket('CRYPTO')}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+              activeMarket === 'CRYPTO'
+                ? 'bg-amber-500/30 text-amber-200 border border-amber-500/50 shadow-sm'
+                : 'text-muted hover:text-white'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>🪙 Kripto</span>
           </button>
         </div>
       </div>

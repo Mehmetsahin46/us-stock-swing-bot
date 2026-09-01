@@ -63,8 +63,19 @@ export async function GET() {
     dualState.us = updatedUs;
     logs.push(...usCloseEvents);
 
+    if (!dualState.crypto) {
+      const { INITIAL_CRYPTO_PORTFOLIO } = await import('@/lib/constants');
+      dualState.crypto = JSON.parse(JSON.stringify(INITIAL_CRYPTO_PORTFOLIO));
+    }
+
+    const currentCrypto = dualState.crypto!;
+    const { portfolio: updatedCrypto, events: cryptoCloseEvents, closedTrades: cryptoClosed } =
+      updateMarketPositionsWithQuotes(currentCrypto, quotesMap);
+    dualState.crypto = updatedCrypto;
+    logs.push(...cryptoCloseEvents);
+
     // Save closed trades to Supabase trade_history table
-    for (const trade of [...bistClosed, ...usClosed]) {
+    for (const trade of [...bistClosed, ...usClosed, ...cryptoClosed]) {
       await saveTradeToHistory(trade);
     }
 
@@ -81,7 +92,7 @@ export async function GET() {
         .filter(r => r.market === 'BIST' && r.signal !== null && r.signal.score >= 70 && r.signal.riskReward >= 1.5)
         .map(r => r.signal as Signal)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 3); // Max 3 best signals per cycle
+        .slice(0, 2); // Max 2 best signals per cycle
 
       for (const sig of bistSignals) {
         const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.bist);
@@ -107,7 +118,7 @@ export async function GET() {
         .filter(r => r.market === 'US' && r.signal !== null && r.signal.score >= 70 && r.signal.riskReward >= 1.5)
         .map(r => r.signal as Signal)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 3); // Max 3 best signals per cycle
+        .slice(0, 2); // Max 2 best signals per cycle
 
       for (const sig of usSignals) {
         const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.us);
@@ -127,17 +138,42 @@ export async function GET() {
       logs.push('[US] Piyasa kapali (16:30-23:00 TSI arasi acik) - yeni alim yapilmadi.');
     }
 
+    // Auto-Trade for CRYPTO (7/24 Kesintisiz Kripto Swing Motoru)
+    if (dualState.crypto.autoTrade) {
+      const cryptoSignals: Signal[] = scanResults
+        .filter(r => r.market === 'CRYPTO' && r.signal !== null && r.signal.score >= 75 && r.signal.riskReward >= 1.5)
+        .map(r => r.signal as Signal)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 2);
+
+      for (const sig of cryptoSignals) {
+        const { portfolio: afterTrade, success, message } = openPositionForMarket(sig, dualState.crypto);
+        if (success) {
+          dualState.crypto = afterTrade;
+          logs.push(`[CRYPTO AUTO] ${message}`);
+          dualState.activityLogs.unshift({
+            id: `log_${Date.now()}_${sig.ticker}`,
+            timestamp: startTime,
+            market: 'CRYPTO',
+            message,
+            type: 'BUY'
+          });
+        }
+      }
+    }
+
     dualState.activityLogs = dualState.activityLogs.slice(0, 50);
     await saveDualPortfolioState(dualState);
 
     return NextResponse.json({
       success: true,
-      job: 'automated-dual-market-cron-v6',
+      job: 'automated-triple-market-cron-v7',
       timestamp: startTime,
       marketStatus: marketStatus.message,
       scannedCount: scanResults.length,
       bistOpenCount: dualState.bist.positions.length,
       usOpenCount: dualState.us.positions.length,
+      cryptoOpenCount: dualState.crypto.positions.length,
       eventsLogged: logs.length,
       logs
     });

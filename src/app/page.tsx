@@ -216,11 +216,28 @@ export default function HomePage() {
     };
   }, []);
 
-  const currentPortfolio: MarketPortfolio = activeMarket === 'BIST' ? dualState.bist : dualState.us;
-  const currentRegime = activeMarket === 'BIST' ? dualState.bistRegime : dualState.usRegime;
+  const currentPortfolio: MarketPortfolio = 
+    activeMarket === 'BIST' 
+      ? dualState.bist 
+      : activeMarket === 'CRYPTO' 
+      ? (dualState.crypto || INITIAL_DUAL_STATE.crypto || INITIAL_DUAL_STATE.us) 
+      : dualState.us;
+
+  const currentRegime = 
+    activeMarket === 'BIST' 
+      ? dualState.bistRegime 
+      : activeMarket === 'CRYPTO' 
+      ? dualState.cryptoRegime 
+      : dualState.usRegime;
 
   function handleOpenPaperTrade(signal: Signal) {
-    const targetPortfolio = signal.market === 'BIST' ? dualState.bist : dualState.us;
+    const targetPortfolio = 
+      signal.market === 'BIST' 
+        ? dualState.bist 
+        : signal.market === 'CRYPTO' 
+        ? (dualState.crypto || INITIAL_DUAL_STATE.crypto || INITIAL_DUAL_STATE.us) 
+        : dualState.us;
+
     const { portfolio: newPort, success, message } = openPositionForMarket(signal, targetPortfolio);
 
     if (success) {
@@ -229,6 +246,7 @@ export default function HomePage() {
           ...prev,
           bist: signal.market === 'BIST' ? newPort : prev.bist,
           us: signal.market === 'US' ? newPort : prev.us,
+          crypto: signal.market === 'CRYPTO' ? newPort : (prev.crypto || INITIAL_DUAL_STATE.crypto),
           activityLogs: [
             {
               id: `log_${Date.now()}_${signal.ticker}`,
@@ -251,14 +269,20 @@ export default function HomePage() {
         body: `${signal.displayTicker} için ${signal.strategyName} ile alım emri açıldı. Hedef: ${signal.target2}`
       });
 
-      showToast(`Başarılı: ${message}`);
+      showToast(`İşlem Açıldı: ${signal.displayTicker} (${signal.suggestedEntry})`);
     } else {
-      showToast(`Alım Yapılamadı: ${message}`);
+      showToast(message);
     }
   }
 
   function handleManualClose(positionId: string) {
-    const targetPortfolio = activeMarket === 'BIST' ? dualState.bist : dualState.us;
+    const targetPortfolio = 
+      activeMarket === 'BIST' 
+        ? dualState.bist 
+        : activeMarket === 'CRYPTO' 
+        ? (dualState.crypto || INITIAL_DUAL_STATE.crypto || INITIAL_DUAL_STATE.us) 
+        : dualState.us;
+
     const { portfolio: newPort, success, message } = manuallyClosePositionInMarket(targetPortfolio, positionId);
 
     if (success) {
@@ -267,6 +291,7 @@ export default function HomePage() {
           ...prev,
           bist: activeMarket === 'BIST' ? newPort : prev.bist,
           us: activeMarket === 'US' ? newPort : prev.us,
+          crypto: activeMarket === 'CRYPTO' ? newPort : (prev.crypto || INITIAL_DUAL_STATE.crypto),
           activityLogs: [
             {
               id: `log_${Date.now()}_${positionId}`,
@@ -340,7 +365,7 @@ export default function HomePage() {
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>{activeMarket === 'BIST' ? '🇹🇷 BIST Portföyü' : '🇺🇸 ABD Portföyü'}</span>
+              <span>{activeMarket === 'BIST' ? '🇹🇷 BIST Portföyü' : activeMarket === 'CRYPTO' ? '🪙 Kripto Portföyü' : '🇺🇸 ABD Portföyü'}</span>
               {openPositionTickers.length > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-white text-[10px] font-bold">
                   {openPositionTickers.length}

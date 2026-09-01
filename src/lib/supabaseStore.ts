@@ -24,6 +24,9 @@ export async function getDualPortfolioState(): Promise<DualPortfolioState> {
 
     const state = data.state as DualPortfolioState;
     if (state && state.bist && state.us) {
+      if (!state.crypto) {
+        state.crypto = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.crypto));
+      }
       memoryState = state;
       return state;
     }

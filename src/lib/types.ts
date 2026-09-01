@@ -1,5 +1,5 @@
-export type MarketType = 'US' | 'BIST';
-export type CurrencyType = 'USD' | 'TRY';
+export type MarketType = 'US' | 'BIST' | 'CRYPTO';
+export type CurrencyType = 'USD' | 'TRY' | 'USDT';
 export type StrategyType = 'EMA_PULLBACK' | 'BREAKOUT' | 'OVERSOLD_BOUNCE' | 'MOMENTUM_TREND';
 export type SectorType = 
   | 'Technology' 
@@ -230,15 +230,17 @@ export interface MarketPortfolio {
 export interface DualPortfolioState {
   bist: MarketPortfolio;
   us: MarketPortfolio;
+  crypto?: MarketPortfolio;
   bistRegime: MarketRegime | null;
   usRegime: MarketRegime | null;
+  cryptoRegime?: MarketRegime | null;
   lastScanTime: string | null;
   lastCronTime: string | null;
   activityLogs: Array<{ id: string; timestamp: string; market: MarketType; message: string; type: 'BUY' | 'SELL' | 'INFO' }>;
 }
 
 export interface BacktestParams {
-  market: 'ALL' | 'US' | 'BIST';
+  market: 'ALL' | 'US' | 'BIST' | 'CRYPTO';
   periodMonths: number;
   initialBalance: number;
   riskPerTradePct: number;
