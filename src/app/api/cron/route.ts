@@ -3,7 +3,7 @@ import { scanUniverse, fetchMarketRegime } from '@/lib/marketData';
 import { getDualPortfolioState, saveDualPortfolioState, saveTradeToHistory } from '@/lib/supabaseStore';
 import { openPositionForMarket, updateMarketPositionsWithQuotes } from '@/lib/portfolioManager';
 import { isBISTOpen, isUSOpen, getMarketStatus } from '@/lib/marketHours';
-import { Signal } from '@/lib/types';
+import { Signal, StockScanResult } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -18,32 +18,21 @@ export async function GET() {
     const usOpen = isUSOpen();
     const marketStatus = getMarketStatus();
 
-    // 🛡️ Akıllı Uyku Modu: Piyasalar kapalıyken (gece/haftasonu) gereksiz tarama yapma, kaynakları koru!
-    if (!bistOpen && !usOpen) {
-      return NextResponse.json({
-        success: true,
-        sleeping: true,
-        message: '💤 Piyasalar kapalı (BIST: 10:00-18:00, ABD: 16:30-23:00). Bot uyku modunda, işlem yapılmadı.',
-        timestamp: startTime
-      });
-    }
-
     const dualState = await getDualPortfolioState();
     logs.push(marketStatus.message);
 
-    const bistRegime = await fetchMarketRegime('BIST');
-    const usRegime = await fetchMarketRegime('US');
-    dualState.bistRegime = bistRegime;
-    dualState.usRegime = usRegime;
-
-    // 🔄 DİNAMİK KUANT EVRENİ REVİZYONU (Quarterly / Periodic Rebalancing)
+    // 🔄 DİNAMİK KUANT EVRENİ REVİZYONU
     const { getDynamicQuantUniverse } = await import('@/lib/universeManager');
-    // Günde bir kez otomatik rebalance kontrolü
     await getDynamicQuantUniverse(false);
 
-    // Sadece açık olan piyasanın hisselerini tara!
-    const marketFilter = bistOpen && usOpen ? 'ALL' : bistOpen ? 'BIST' : 'US';
-    const scanResults = await scanUniverse(marketFilter);
+    // 🚀 PARALEL TARAMA: Kripto 7/24 taranır, hisseler sadece piyasaları açıkken taranır!
+    const scanPromises: Promise<StockScanResult[]>[] = [scanUniverse('CRYPTO')];
+    if (bistOpen) scanPromises.push(scanUniverse('BIST'));
+    if (usOpen) scanPromises.push(scanUniverse('US'));
+
+    const allScans = await Promise.all(scanPromises);
+    const scanResults = allScans.flat();
+
     dualState.lastScanTime = startTime;
     dualState.lastCronTime = startTime;
 

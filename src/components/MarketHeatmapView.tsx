@@ -15,29 +15,31 @@ export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, o
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   const marketResults = results.filter(r => {
+    if (!r) return false;
     if (r.market !== selectedMarket) return false;
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
-      const tickerMatch = r.displayTicker.toUpperCase().includes(q) || r.ticker.toUpperCase().includes(q);
-      const nameMatch = r.name.toUpperCase().includes(q);
-      const sectorMatch = r.sector.toUpperCase().includes(q);
+      const tickerMatch = (r.displayTicker || r.ticker || '').toUpperCase().includes(q);
+      const nameMatch = (r.name || '').toUpperCase().includes(q);
+      const sectorMatch = (r.sector || '').toUpperCase().includes(q);
       return tickerMatch || nameMatch || sectorMatch;
     }
     return true;
   });
 
   // Group by sector
-  const sectorsMap = new Map<SectorType, StockScanResult[]>();
+  const sectorsMap = new Map<string, StockScanResult[]>();
   for (const r of marketResults) {
-    if (!sectorsMap.has(r.sector)) {
-      sectorsMap.set(r.sector, []);
+    const sec = (r.sector as string) || 'Genel';
+    if (!sectorsMap.has(sec)) {
+      sectorsMap.set(sec, []);
     }
-    sectorsMap.get(r.sector)!.push(r);
+    sectorsMap.get(sec)!.push(r);
   }
 
   const getTileBg = (item: StockScanResult) => {
     if (colorMode === 'CHANGE') {
-      const chg = item.technicals.changePercent;
+      const chg = item.technicals?.changePercent ?? 0;
       if (chg >= 4.0) return 'bg-emerald-600/90 text-white';
       if (chg >= 2.0) return 'bg-emerald-700/80 text-white';
       if (chg >= 0.5) return 'bg-emerald-900/60 text-emerald-200 border border-emerald-500/30';
@@ -143,7 +145,7 @@ export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, o
       {/* Sector Groups */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from(sectorsMap.entries()).map(([sectorName, items]) => {
-          const avgChange = items.reduce((acc, it) => acc + it.technicals.changePercent, 0) / items.length;
+          const avgChange = items.reduce((acc, it) => acc + (it.technicals?.changePercent ?? 0), 0) / Math.max(items.length, 1);
 
           return (
             <div
@@ -165,14 +167,20 @@ export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, o
               {/* Ticker Tiles Grid */}
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {items.map(item => {
+                  const chgPct = item.technicals?.changePercent ?? 0;
                   const hasSignal = Boolean(item.signal);
                   const isA = item.signal?.grade === 'A+' || item.signal?.grade === 'A';
 
                   return (
                     <div
                       key={item.ticker}
+                      onClick={() => {
+                        if (item.signal && onOpenTrade) {
+                          onOpenTrade(item.signal);
+                        }
+                      }}
                       className={`p-2 rounded-xl text-center transition-all flex flex-col justify-center items-center relative group cursor-pointer hover:scale-105 ${getTileBg(item)}`}
-                      title={`${item.displayTicker}: ${item.technicals.changePercent}% | Skor: ${item.signal?.score || 'Nötr'}`}
+                      title={`${item.displayTicker}: ${chgPct}% | Skor: ${item.signal?.score || 'Nötr'}`}
                     >
                       {isA && (
                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-slate-900 animate-pulse" />
@@ -182,7 +190,7 @@ export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, o
                       </span>
                       <span className="text-[10px] font-mono font-bold block mt-0.5 opacity-90">
                         {colorMode === 'CHANGE'
-                          ? `${item.technicals.changePercent >= 0 ? '+' : ''}${item.technicals.changePercent.toFixed(1)}%`
+                          ? `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(1)}%`
                           : `${item.signal?.score || 50}p`}
                       </span>
                     </div>
