@@ -91,11 +91,20 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
                     <div>
                       <div className="font-bold text-white text-sm flex items-center gap-1.5">
                         {pos.displayTicker}
-                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
-                          pos.market === 'BIST' ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded border font-semibold ${
+                          pos.market === 'BIST' 
+                            ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+                            : pos.market === 'CRYPTO'
+                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                            : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
                         }`}>
-                          {pos.market === 'BIST' ? '🇹🇷 BIST' : '🇺🇸 US'}
+                          {pos.market === 'BIST' ? '🇹🇷 BIST' : pos.market === 'CRYPTO' ? '🪙 CRYPTO' : '🇺🇸 US'}
                         </span>
+                        {pos.leverage && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
+                            ⚡ {pos.leverage}x Kaldıraç
+                          </span>
+                        )}
                         {pos.tp1Hit && (
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-0.5">
                             <CheckCircle2 className="w-2.5 h-2.5" /> TP1 Alındı
@@ -154,6 +163,12 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
                       <Target className="w-3 h-3" /> TP2: {currSign}{pos.target2.toFixed(2)}
                     </span>
                   </div>
+                  {pos.liquidationPrice && (
+                    <div className="text-[10px] text-rose-400/90 font-mono mb-1 flex items-center justify-between">
+                      <span>💀 Likidasyon:</span>
+                      <span className="font-bold">{currSign}{pos.liquidationPrice.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden relative">
                     <div
                       className={`h-full transition-all rounded-full ${isProfit ? 'bg-primary-500' : 'bg-danger-500'}`}

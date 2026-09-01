@@ -152,6 +152,8 @@ export default function HomePage() {
       const updated = JSON.parse(JSON.stringify(prev)) as DualPortfolioState;
       if (market === 'BIST') {
         updated.bist = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.bist));
+      } else if (market === 'CRYPTO') {
+        updated.crypto = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.crypto));
       } else {
         updated.us = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.us));
       }

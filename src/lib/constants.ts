@@ -58,9 +58,9 @@ export const INITIAL_CRYPTO_PORTFOLIO: MarketPortfolio = {
   market: 'CRYPTO',
   currency: 'USDT',
   currencySymbol: '₮',
-  initialBalance: 1000,
-  cash: 1000,
-  totalEquity: 1000,
+  initialBalance: 100,
+  cash: 100,
+  totalEquity: 100,
   realizedPnL: 0,
   unrealizedPnL: 0,
   winRate: 0,
@@ -77,7 +77,7 @@ export const INITIAL_CRYPTO_PORTFOLIO: MarketPortfolio = {
   usePartialTakeProfit: true,
   positions: [],
   history: [],
-  equityCurve: [{ date: today, equity: 1000 }]
+  equityCurve: [{ date: today, equity: 100 }]
 };
 
 export const INITIAL_DUAL_STATE: DualPortfolioState = {

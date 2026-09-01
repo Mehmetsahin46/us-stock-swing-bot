@@ -59,51 +59,69 @@ export function openPositionForMarket(
     };
   }
 
-  // 🎯 2. DENGELİ VE KORUMACI POZİSYON BOYUTLANDIRMASI (Max %8 - %10 Sizing Cap)
-  // Tek bir hisseye/coine sermayenin en fazla %8-%10'u verilir:
-  // - Skor >= 90 (A+ Elit): %10 Sermaye
-  // - Skor >= 80 (A Güçlü): %8 Sermaye
-  // - Standart Sinyal:      %6 Sermaye
-  // - Kripto Piyasası:      %5 Sermaye (Yüksek volatilite kalkanı)
+  // 🎯 2. DENGELİ POZİSYON BOYUTLANDIRMASI & KALDIRAÇ (Leverage Multiplier)
+  // Kriptoda kaldıraç oranları:
+  // - Skor >= 90: 5x Kaldıraç (A+ Elit Sinyal)
+  // - Skor >= 80: 3x Kaldıraç (A Güçlü Sinyal)
+  // - Standart:    2x Kaldıraç
+  const isCrypto = signal.market === 'CRYPTO';
+  const leverage = isCrypto 
+    ? (signal.leverage || (signal.score >= 90 ? 5 : signal.score >= 80 ? 3 : 2))
+    : 1;
+
   let capitalRatio = 0.06;
-  if (signal.market === 'CRYPTO') {
-    capitalRatio = 0.05; // Kripto için max %5
+  if (isCrypto) {
+    // 100 USDT bütçede tek işleme %15 teminat (15 USDT margin)
+    capitalRatio = 0.15;
   } else if (signal.score >= 90) {
     capitalRatio = 0.10; // A+ hisse için max %10
   } else if (signal.score >= 80) {
     capitalRatio = 0.08; // A hisse için max %8
   }
 
-  const targetCapital = Math.min(availableCash, portfolio.totalEquity * capitalRatio);
+  const targetMargin = Math.min(availableCash, portfolio.totalEquity * capitalRatio);
+  const targetNotional = targetMargin * leverage;
   
   let shares = 0;
   let totalCost = 0;
+  let marginUsed = targetMargin;
+  let liquidationPrice: number | undefined = undefined;
 
-  if (signal.market === 'CRYPTO') {
-    // Kripto için kesirli coin alımı (örn: 0.015 BTC, 1.25 SOL)
-    shares = Number((targetCapital / signal.suggestedEntry).toFixed(4));
+  if (isCrypto) {
+    // Kripto için kesirli coin alımı (örn: 0.005 BTC, 0.45 SOL)
+    shares = Number((targetNotional / signal.suggestedEntry).toFixed(4));
     totalCost = Number((shares * signal.suggestedEntry).toFixed(2));
-    if (totalCost > availableCash) {
-      shares = Number((availableCash / signal.suggestedEntry).toFixed(4));
+    marginUsed = Number((totalCost / leverage).toFixed(2));
+
+    if (marginUsed > availableCash) {
+      marginUsed = availableCash;
+      const adjustedNotional = marginUsed * leverage;
+      shares = Number((adjustedNotional / signal.suggestedEntry).toFixed(4));
       totalCost = Number((shares * signal.suggestedEntry).toFixed(2));
     }
+
+    // Likidasyon Fiyatı (%90 teminat kaybında likidasyon)
+    liquidationPrice = Number((signal.suggestedEntry * (1 - (0.9 / leverage))).toFixed(4));
   } else {
     // BIST ve ABD Hisseleri için tam adet
-    const sharesFromCap = Math.floor(targetCapital / signal.suggestedEntry);
+    const sharesFromCap = Math.floor(targetMargin / signal.suggestedEntry);
     shares = sharesFromCap > 0 ? sharesFromCap : 1;
     totalCost = Number((shares * signal.suggestedEntry).toFixed(2));
+    marginUsed = totalCost;
 
     if (totalCost > availableCash) {
       shares = Math.floor(availableCash / signal.suggestedEntry);
       totalCost = Number((shares * signal.suggestedEntry).toFixed(2));
+      marginUsed = totalCost;
     }
   }
 
-  if (shares <= 0 || totalCost <= 0) {
+  if (shares <= 0 || marginUsed <= 0) {
     return { portfolio: currentPortfolio, success: false, message: 'Pozisyon açmak için yeterli nakit rezervi yok (En az %25 nakit korunuyor).' };
   }
 
-  portfolio.cash = Math.max(0, Number((portfolio.cash - totalCost).toFixed(2)));
+  // Kasadan sadece kullanılan teminat (margin) düşülür
+  portfolio.cash = Math.max(0, Number((portfolio.cash - marginUsed).toFixed(2)));
   const currSign = portfolio.currencySymbol;
 
   const newPosition: TradePosition = {
@@ -114,12 +132,15 @@ export function openPositionForMarket(
     market: signal.market,
     currency: signal.currency,
     strategy: signal.strategy,
-    strategyName: signal.strategyName,
+    strategyName: isCrypto ? `${signal.strategyName} (${leverage}x Kaldıraç)` : signal.strategyName,
     entryDate: new Date().toISOString().split('T')[0],
     entryPrice: signal.suggestedEntry,
     initialShares: shares,
     shares,
     totalCost: Number(totalCost.toFixed(2)),
+    marginUsed: Number(marginUsed.toFixed(2)),
+    leverage: isCrypto ? leverage : undefined,
+    liquidationPrice: isCrypto ? liquidationPrice : undefined,
     originalStopLoss: signal.stopLoss,
     stopLoss: signal.stopLoss,
     target1: signal.target1,
@@ -202,24 +223,34 @@ export function updateMarketPositionsWithQuotes(
       }
     }
 
+    const lev = pos.leverage || 1;
     pos.unrealizedPnL = Number(((currentPrice - pos.entryPrice) * pos.shares).toFixed(2));
-    pos.unrealizedPnLPct = Number((((currentPrice - pos.entryPrice) / pos.entryPrice) * 100).toFixed(2));
+    // Kaldıraçlı ROE Getirisi (%)
+    pos.unrealizedPnLPct = Number((((currentPrice - pos.entryPrice) / pos.entryPrice) * 100 * lev).toFixed(2));
 
     let shouldClose = false;
     let exitReason = '';
     let exitStatus: TradePosition['status'] = 'OPEN';
     let exitPrice = currentPrice;
 
+    // 🚨 KRİPTO LİKİDASYON KONTROLÜ (Liquidation Guard)
+    if (pos.market === 'CRYPTO' && pos.liquidationPrice && currentPrice <= pos.liquidationPrice) {
+      shouldClose = true;
+      exitPrice = pos.liquidationPrice;
+      exitStatus = 'CLOSED_LIQUIDATED';
+      exitReason = `⚠️ LİKİDASYON: Fiyat likidasyon seviyesine (${currSign}${pos.liquidationPrice}) indi, teminat sıfırlandı.`;
+      events.push(`💥 LİKİDASYON: ${pos.displayTicker} (${lev}x Kaldıraç) likide oldu.`);
+    }
+
     // 🚀 PUMP YAKALAMA & KÂR KİLİTLEME KALKANI:
-    // Eğer hisse aniden %6'dan fazla kâra geçtiyse ve hedef yakınsa kârı masada bırakma
-    if (pos.unrealizedPnLPct >= 6.5 && !pos.tp1Hit) {
+    if (!shouldClose && pos.unrealizedPnLPct >= (6.5 * lev) && !pos.tp1Hit) {
       pos.tp1Hit = true;
       pos.isBreakeven = true;
       pos.stopLoss = Number((pos.entryPrice * 1.025).toFixed(2)); // Stop'u %2.5 kâr bölgesine çek
-      events.push(`🚀 PUMP KALKANI: ${pos.displayTicker} ani sıçrama yaptı! Kâr kilitlendi, Stop %2.5 kâra çekildi.`);
+      events.push(`🚀 PUMP KALKANI: ${pos.displayTicker} (${lev}x) ani sıçrama yaptı! Kâr kilitlendi, Stop %2.5 kâra çekildi.`);
     }
 
-    if (currentPrice <= pos.stopLoss) {
+    if (!shouldClose && currentPrice <= pos.stopLoss) {
       shouldClose = true;
       exitPrice = pos.stopLoss;
       if (pos.isBreakeven) {
@@ -231,13 +262,13 @@ export function updateMarketPositionsWithQuotes(
         exitReason = `Stop-Loss (${currSign}${pos.stopLoss}) tetiklendi.`;
         events.push(`SL: ${pos.displayTicker} Stop-Loss (${currSign}${pos.stopLoss}) tetiklendi. %${pos.unrealizedPnLPct}`);
       }
-    } else if (currentPrice >= pos.target2) {
+    } else if (!shouldClose && currentPrice >= pos.target2) {
       shouldClose = true;
       exitStatus = 'CLOSED_TP2';
       exitPrice = pos.target2;
       exitReason = `Ana Kar Hedefi (${currSign}${pos.target2}) gerceklesti!`;
       events.push(`TP2: ${pos.displayTicker} Ana Kar Hedefine ulasti! +%${pos.unrealizedPnLPct}`);
-    } else if (pos.daysHeld >= pos.maxHoldingDays) {
+    } else if (!shouldClose && pos.daysHeld >= pos.maxHoldingDays) {
       shouldClose = true;
       exitStatus = 'CLOSED_EXPIRED';
       exitPrice = currentPrice;
@@ -250,12 +281,20 @@ export function updateMarketPositionsWithQuotes(
       pos.exitDate = todayStr;
       pos.exitPrice = exitPrice;
       pos.exitReason = exitReason;
-      const finalLegPnL = Number(((exitPrice - pos.entryPrice) * pos.shares).toFixed(2));
+
+      const finalLegPnL = exitStatus === 'CLOSED_LIQUIDATED' 
+        ? -(pos.marginUsed || pos.totalCost)
+        : Number(((exitPrice - pos.entryPrice) * pos.shares).toFixed(2));
+
       pos.realizedPnL = Number((pos.realizedPnL + finalLegPnL).toFixed(2));
-      pos.realizedPnLPct = Number((((pos.realizedPnL) / (pos.entryPrice * pos.initialShares)) * 100).toFixed(2));
+      const baseCost = pos.marginUsed || (pos.entryPrice * pos.initialShares);
+      pos.realizedPnLPct = Number(((pos.realizedPnL / Math.max(baseCost, 1)) * 100).toFixed(2));
       pos.unrealizedPnL = 0;
       pos.unrealizedPnLPct = 0;
-      portfolio.cash = Math.max(0, Number((portfolio.cash + pos.shares * exitPrice).toFixed(2)));
+
+      // Teminat + Kâr/Zarar kasaya geri döner
+      const releasedMargin = pos.marginUsed ? pos.marginUsed : (pos.shares * pos.entryPrice);
+      portfolio.cash = Math.max(0, Number((portfolio.cash + releasedMargin + finalLegPnL).toFixed(2)));
       portfolio.history.unshift(pos);
       closedTrades.push(pos);
     } else {
@@ -287,10 +326,13 @@ export function manuallyClosePositionInMarket(
   pos.exitReason = 'Manuel olarak kapatildi.';
   const finalLegPnL = Number(((exitPrice - pos.entryPrice) * pos.shares).toFixed(2));
   pos.realizedPnL = Number((pos.realizedPnL + finalLegPnL).toFixed(2));
-  pos.realizedPnLPct = Number((((pos.realizedPnL) / (pos.entryPrice * pos.initialShares)) * 100).toFixed(2));
+  const baseCost = pos.marginUsed || (pos.entryPrice * pos.initialShares);
+  pos.realizedPnLPct = Number(((pos.realizedPnL / Math.max(baseCost, 1)) * 100).toFixed(2));
   pos.unrealizedPnL = 0;
   pos.unrealizedPnLPct = 0;
-  portfolio.cash = Math.max(0, Number((portfolio.cash + pos.shares * exitPrice).toFixed(2)));
+
+  const releasedMargin = pos.marginUsed ? pos.marginUsed : (pos.shares * pos.entryPrice);
+  portfolio.cash = Math.max(0, Number((portfolio.cash + releasedMargin + finalLegPnL).toFixed(2)));
   portfolio.positions.splice(index, 1);
   portfolio.history.unshift(pos);
   recalculateMarketPortfolio(portfolio);
@@ -303,16 +345,17 @@ export function manuallyClosePositionInMarket(
 }
 
 export function recalculateMarketPortfolio(portfolio: MarketPortfolio) {
-  let openPositionsValue = 0;
+  let openPositionsCapital = 0;
   let totalUnrealized = 0;
   for (const pos of portfolio.positions) {
     if (pos.status === 'OPEN') {
-      openPositionsValue += pos.shares * pos.currentPrice;
+      const positionCapital = pos.marginUsed !== undefined ? pos.marginUsed : (pos.shares * pos.entryPrice);
+      openPositionsCapital += positionCapital;
       totalUnrealized += pos.unrealizedPnL;
     }
   }
   portfolio.unrealizedPnL = Number(totalUnrealized.toFixed(2));
-  portfolio.totalEquity = Number((portfolio.cash + openPositionsValue).toFixed(2));
+  portfolio.totalEquity = Number((portfolio.cash + openPositionsCapital + totalUnrealized).toFixed(2));
 
   let totalRealized = 0; let wins = 0; let losses = 0;
   let totalWinAmount = 0; let totalLossAmount = 0;

@@ -151,6 +151,7 @@ export interface Signal {
   quarantineExpiresInSeconds?: number; // Otomatik mezuniyet için kalan süre (sn)
   estimatedDays?: number;
   estimatedTimeframe?: string;
+  leverage?: number; // Kaldıraç Çarpanı (Kripto için örn. 2x, 3x, 5x)
   timestamp: string;
 }
 
@@ -160,6 +161,7 @@ export type PositionStatus =
   | 'CLOSED_TP2'
   | 'CLOSED_SL'
   | 'CLOSED_BREAKEVEN'
+  | 'CLOSED_LIQUIDATED'
   | 'CLOSED_EXPIRED'
   | 'CLOSED_MANUAL';
 
@@ -177,6 +179,9 @@ export interface TradePosition {
   initialShares: number;
   shares: number;
   totalCost: number;
+  marginUsed?: number; // Pozisyon için kilitlenen teminat
+  leverage?: number; // Kaldıraç Oranı (örn: 3x, 5x)
+  liquidationPrice?: number; // Likidasyon Fiyatı
   originalStopLoss: number;
   stopLoss: number;
   target1: number;
