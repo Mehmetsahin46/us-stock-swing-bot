@@ -86,6 +86,12 @@ export const ScannerView: React.FC<ScannerViewProps> = ({
             >
               🇺🇸 ABD ({results.filter(r => r.market === 'US').length})
             </button>
+            <button
+              onClick={() => setSelectedMarket('CRYPTO')}
+              className={`px-3 py-1 rounded-md font-medium transition-colors ${selectedMarket === 'CRYPTO' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
+            >
+              🪙 Kripto ({results.filter(r => r.market === 'CRYPTO').length})
+            </button>
           </div>
 
           {onOpenAddStock && (

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { StockScanResult, SectorType } from '@/lib/types';
+import { StockScanResult, SectorType, MarketType } from '@/lib/types';
 import { LayoutGrid, TrendingUp, TrendingDown, Layers, Zap, ShoppingCart, Search, X } from 'lucide-react';
 
 interface MarketHeatmapViewProps {
@@ -10,7 +10,7 @@ interface MarketHeatmapViewProps {
 }
 
 export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, onOpenTrade }) => {
-  const [selectedMarket, setSelectedMarket] = useState<'BIST' | 'US'>('BIST');
+  const [selectedMarket, setSelectedMarket] = useState<MarketType>('BIST');
   const [colorMode, setColorMode] = useState<'CHANGE' | 'SCORE'>('CHANGE');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
@@ -107,6 +107,14 @@ export const MarketHeatmapView: React.FC<MarketHeatmapViewProps> = ({ results, o
               }`}
             >
               🇺🇸 ABD ({results.filter(r => r.market === 'US').length})
+            </button>
+            <button
+              onClick={() => setSelectedMarket('CRYPTO')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                selectedMarket === 'CRYPTO' ? 'bg-amber-500/30 text-amber-200 border border-amber-500/50' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🪙 Kripto ({results.filter(r => r.market === 'CRYPTO').length})
             </button>
           </div>
 

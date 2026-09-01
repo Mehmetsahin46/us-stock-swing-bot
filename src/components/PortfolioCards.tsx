@@ -19,7 +19,9 @@ export const PortfolioCards: React.FC<PortfolioCardsProps> = ({ portfolio }) => 
       {/* 1. Total Equity */}
       <div className="p-4 rounded-xl bg-card/90 border border-border flex flex-col justify-between hover:border-slate-700 transition-colors">
         <div className="flex items-center justify-between text-muted mb-2">
-          <span className="text-xs font-medium">{portfolio.market === 'BIST' ? 'BIST Bakiye' : 'ABD Bakiye'}</span>
+          <span className="text-xs font-medium">
+            {portfolio.market === 'BIST' ? 'BIST Bakiye' : portfolio.market === 'CRYPTO' ? 'Kripto Bakiye' : 'ABD Bakiye'}
+          </span>
           <Wallet className="w-4 h-4 text-accent-400" />
         </div>
         <div>

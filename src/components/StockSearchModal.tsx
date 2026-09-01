@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, X, TrendingUp, TrendingDown, ArrowRight, Sparkles, HelpCircle, ShoppingCart } from 'lucide-react';
 import { StockScanResult, Signal, MarketType } from '@/lib/types';
-import { BIST_UNIVERSE, US_UNIVERSE, UniverseItem } from '@/lib/marketData';
+import { BIST_UNIVERSE, US_UNIVERSE, CRYPTO_UNIVERSE, UniverseItem } from '@/lib/marketData';
 
 interface StockSearchModalProps {
   isOpen: boolean;
@@ -21,11 +21,11 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
   onOpenDetail
 }) => {
   const [query, setQuery] = useState('');
-  const [selectedMarket, setSelectedMarket] = useState<'ALL' | 'BIST' | 'US'>('ALL');
+  const [selectedMarket, setSelectedMarket] = useState<'ALL' | MarketType>('ALL');
 
   // Combine all universe items
   const allUniverse = useMemo(() => {
-    return [...BIST_UNIVERSE, ...US_UNIVERSE];
+    return [...BIST_UNIVERSE, ...US_UNIVERSE, ...CRYPTO_UNIVERSE];
   }, []);
 
   // Quick lookup map for scanned results
@@ -123,6 +123,16 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
             }`}
           >
             🇺🇸 ABD ({US_UNIVERSE.length})
+          </button>
+          <button
+            onClick={() => setSelectedMarket('CRYPTO')}
+            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+              selectedMarket === 'CRYPTO'
+                ? 'bg-amber-600 text-amber-100 shadow-md'
+                : 'text-slate-400 hover:text-white bg-slate-800'
+            }`}
+          >
+            🪙 Kripto ({CRYPTO_UNIVERSE.length})
           </button>
         </div>
 

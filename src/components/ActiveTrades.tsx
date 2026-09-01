@@ -125,7 +125,7 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
 
                 <td className="py-3.5 px-4">
                   <div className="text-white font-medium">
-                    {pos.shares} Lot {pos.shares < pos.initialShares && <span className="text-muted text-[10px]">({pos.initialShares} baştan)</span>}
+                    {pos.market === 'CRYPTO' ? `${pos.shares} ${pos.displayTicker}` : `${pos.shares} Lot`} {pos.shares < pos.initialShares && <span className="text-muted text-[10px]">({pos.initialShares} baştan)</span>}
                   </div>
                   <div className="text-[11px] text-muted">
                     {currSign}{(pos.shares * pos.entryPrice).toFixed(2)}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { StockScanResult, Signal } from '@/lib/types';
+import { StockScanResult, Signal, MarketType } from '@/lib/types';
 import { Flame, Sparkles, TrendingUp, Zap, Clock, ShieldCheck, HelpCircle, ArrowRight, ShoppingCart, Search, X } from 'lucide-react';
 
 interface TopOpportunitiesPanelProps {
@@ -11,7 +11,7 @@ interface TopOpportunitiesPanelProps {
 }
 
 export const TopOpportunitiesPanel: React.FC<TopOpportunitiesPanelProps> = ({ results, onOpenTrade, onOpenDetail }) => {
-  const [activeMarket, setActiveMarket] = useState<'BIST' | 'US'>('BIST');
+  const [activeMarket, setActiveMarket] = useState<MarketType>('BIST');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Filter signals and sort by score & grade
@@ -53,7 +53,7 @@ export const TopOpportunitiesPanel: React.FC<TopOpportunitiesPanelProps> = ({ re
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            500+ kurumsal hisse arasından 20 Günlük ADV ortalama hacim, $5+ fiyat tabanı ve IPO soğuma kalkanı uygulanarak elenen likit fırsatlar.
+            500+ kurumsal hisse ve 7/24 kripto varlık arasından 20 Günlük ADV ortalama hacim, fiyat tabanı ve volatilite kalkanı uygulanarak elenen likit fırsatlar.
           </p>
         </div>
 
@@ -80,19 +80,27 @@ export const TopOpportunitiesPanel: React.FC<TopOpportunitiesPanelProps> = ({ re
           <div className="flex items-center bg-card border border-border rounded-xl p-1 text-xs">
             <button
               onClick={() => setActiveMarket('BIST')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                 activeMarket === 'BIST' ? 'bg-red-500/30 text-white border border-red-500/50 shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span>🇹🇷 BIST</span>
+              <span>🇹🇷 BIST ({results.filter(r => r.market === 'BIST' && r.signal !== null).length})</span>
             </button>
             <button
               onClick={() => setActiveMarket('US')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                 activeMarket === 'US' ? 'bg-blue-500/30 text-white border border-blue-500/50 shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span>🇺🇸 ABD</span>
+              <span>🇺🇸 ABD ({results.filter(r => r.market === 'US' && r.signal !== null).length})</span>
+            </button>
+            <button
+              onClick={() => setActiveMarket('CRYPTO')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                activeMarket === 'CRYPTO' ? 'bg-amber-500/30 text-amber-200 border border-amber-500/50 shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🪙 Kripto ({results.filter(r => r.market === 'CRYPTO' && r.signal !== null).length})</span>
             </button>
           </div>
         </div>
