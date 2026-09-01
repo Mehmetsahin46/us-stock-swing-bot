@@ -119,35 +119,39 @@ export const NotificationRulesModal: React.FC<NotificationRulesModalProps> = ({ 
             />
           </label>
 
-          {/* Rule 4: Signal Invalidation Alerts */}
-          <label className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between cursor-pointer">
-            <div>
-              <span className="font-bold text-white block">Sinyal İptal (Invalidated) Uyarıları</span>
-              <span className="text-[11px] text-slate-400">Teknik destek kırıldığında anında uyar.</span>
+          {/* Rule 4: Mobile Push Channel (ntfy.sh) */}
+          <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-white flex items-center gap-1.5">
+                <span>📲 Telefon Push Bildirim Kanalı</span>
+              </span>
+              <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
+                7/24 Kilitli Ekran
+              </span>
             </div>
-            <input
-              type="checkbox"
-              checked={notifyOnInvalidated}
-              onChange={e => setNotifyOnInvalidated(e.target.checked)}
-              className="w-4 h-4 rounded accent-primary-500 cursor-pointer"
-            />
-          </label>
+            <p className="text-[11px] text-slate-400">
+              Uygulama veya telefon kilitliyken bildirim almak için telefonunuza ücretsiz <strong>ntfy</strong> uygulamasını yükleyip <strong>swingbot-live-alerts</strong> kanalını ekleyin veya tarayıcı izinlerini açın.
+            </p>
+          </div>
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between pt-2 gap-2 flex-wrap">
           <button
             onClick={async () => {
-              await requestNotificationPermission();
+              const { sendRemotePhoneNotification } = await import('@/lib/remotePushService');
+              await sendRemotePhoneNotification('🔔 SwingBot Test Bildirimi', 'Tebrikler! Telefon bildirim sisteminiz başarıyla bağlandı. Tüm canlı alım/satım ve kâr hedefleri anında telefonunuza düşecektir.', 'high', ['white_check_mark', 'bell']);
+              alert('📲 Test bildirimi gönderildi! Telefonunuzdaki ntfy uygulamasını veya tarayıcı bildirimlerini kontrol ediniz.');
             }}
-            className="text-xs text-indigo-400 hover:underline font-semibold cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
           >
-            İzinleri Kontrol Et
+            <Zap className="w-3.5 h-3.5" />
+            <span>Telefona Test Gönder</span>
           </button>
 
           <button
             onClick={handleSave}
-            className="px-5 py-2.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-xs font-bold shadow-md shadow-primary-500/20 transition-all cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-xs font-bold shadow-md shadow-primary-500/20 transition-all cursor-pointer"
           >
             Kuralları Kaydet
           </button>

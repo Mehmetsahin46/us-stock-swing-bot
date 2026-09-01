@@ -63,9 +63,14 @@ export async function GET() {
     dualState.crypto = updatedCrypto;
     logs.push(...cryptoCloseEvents);
 
-    // Save closed trades to Supabase trade_history table
+    // Save closed trades to Supabase trade_history table and send phone push
+    const { sendRemotePhoneNotification } = await import('@/lib/remotePushService');
     for (const trade of [...bistClosed, ...usClosed, ...cryptoClosed]) {
       await saveTradeToHistory(trade);
+    }
+
+    for (const event of [...bistCloseEvents, ...usCloseEvents, ...cryptoCloseEvents]) {
+      await sendRemotePhoneNotification('🎯 SwingBot İşlem Güncellemesi', event, 'high', ['bell', 'chart']);
     }
 
     // 🎯 Sinyal Takip & Sonuçlandırma Motoru (Signal Tracker & Invalidation)
@@ -88,6 +93,7 @@ export async function GET() {
         if (success) {
           dualState.bist = afterTrade;
           logs.push(`[BIST AUTO] ${message}`);
+          await sendRemotePhoneNotification(`🇹🇷 BIST Alım: ${sig.displayTicker}`, `${message} | TP1: ${sig.target1} | Skor: ${sig.score}`, 'high', ['chart_with_upwards_trend']);
           dualState.activityLogs.unshift({
             id: `log_${Date.now()}_${sig.ticker}`,
             timestamp: startTime,
@@ -114,6 +120,7 @@ export async function GET() {
         if (success) {
           dualState.us = afterTrade;
           logs.push(`[US AUTO] ${message}`);
+          await sendRemotePhoneNotification(`🇺🇸 ABD Alım: ${sig.displayTicker}`, `${message} | TP1: ${sig.target1} | Skor: ${sig.score}`, 'high', ['chart_with_upwards_trend']);
           dualState.activityLogs.unshift({
             id: `log_${Date.now()}_${sig.ticker}`,
             timestamp: startTime,
@@ -130,7 +137,7 @@ export async function GET() {
     // Auto-Trade for CRYPTO (7/24 Kesintisiz Kripto Swing Motoru)
     if (dualState.crypto.autoTrade) {
       const cryptoSignals: Signal[] = scanResults
-        .filter(r => r.market === 'CRYPTO' && r.signal !== null && r.signal.score >= 75 && r.signal.riskReward >= 1.5)
+        .filter(r => r.market === 'CRYPTO' && r.signal !== null && r.signal.score >= 70 && r.signal.riskReward >= 1.4)
         .map(r => r.signal as Signal)
         .sort((a, b) => b.score - a.score)
         .slice(0, 2);
@@ -140,6 +147,7 @@ export async function GET() {
         if (success) {
           dualState.crypto = afterTrade;
           logs.push(`[CRYPTO AUTO] ${message}`);
+          await sendRemotePhoneNotification(`🪙 Kripto Kaldıraçlı Alım: ${sig.displayTicker}`, `${message} | TP1: ${sig.target1} | Skor: ${sig.score}`, 'high', ['rocket', 'fire']);
           dualState.activityLogs.unshift({
             id: `log_${Date.now()}_${sig.ticker}`,
             timestamp: startTime,
