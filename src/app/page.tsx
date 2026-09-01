@@ -91,9 +91,15 @@ export default function HomePage() {
       const res = await fetch('/api/portfolio');
       const data = await res.json();
       if (data.success && data.state) {
-        setDualState(data.state);
+        const serverState = data.state as DualPortfolioState;
+        // Migration: Eğer Kripto henüz işlem yapmamış ve eski 1000 USDT bakiyedeyse 100 USDT'ye güncelle
+        if (serverState.crypto && (serverState.crypto.initialBalance === 1000 || !serverState.crypto.initialBalance) && serverState.crypto.positions.length === 0) {
+          serverState.crypto = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.crypto));
+          saveStateToServer(serverState);
+        }
+        setDualState(serverState);
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(serverState));
         } catch (e) {}
       }
     } catch (err) {
@@ -492,7 +498,11 @@ export default function HomePage() {
               <div className="lg:col-span-2 space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-white">
-                    {activeMarket === 'BIST' ? '🇹🇷 BIST Açık Pozisyonlar (60 Gün Trend)' : '🇺🇸 ABD Açık Pozisyonlar (60 Gün Trend)'}
+                    {activeMarket === 'BIST' 
+                      ? '🇹🇷 BIST Açık Pozisyonlar (60 Gün Trend)' 
+                      : activeMarket === 'CRYPTO'
+                      ? '🪙 Kripto 7/24 Kaldıraçlı Açık Pozisyonlar (30 Gün Trend)'
+                      : '🇺🇸 ABD Açık Pozisyonlar (60 Gün Trend)'}
                   </h2>
                   <span className="text-xs text-muted">
                     {openPositionTickers.length} / {currentPortfolio.maxOpenPositions} Pozisyon
@@ -512,17 +522,28 @@ export default function HomePage() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-white flex items-center gap-1.5">
                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      <span>{activeMarket === 'BIST' ? 'BIST' : 'ABD'} Güvenlik Kalkanı</span>
+                      <span>{activeMarket === 'BIST' ? 'BIST' : activeMarket === 'CRYPTO' ? 'Kripto Kaldıraç &' : 'ABD'} Güvenlik Kalkanı</span>
                     </h3>
                     <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold">
                       Korumalar Aktif
                     </span>
                   </div>
                   <ul className="text-muted space-y-1.5 list-disc pl-4 text-[11px]">
-                    <li><strong>Dinamik Bütçe Tahsisi:</strong> A+ Elit sinyallere %25, normal sinyallere %10 bütçe.</li>
-                    <li><strong>Kademeli Kâr Alma:</strong> TP1'de %50 kâr cebe konur, stop maliyete çekilir.</li>
-                    <li><strong>Başa-Baş Stop:</strong> Kâra geçmiş işlem asla zararla kapanmaz.</li>
-                    <li><strong>Sektör Sınırı:</strong> Aynı sektörden en fazla 3 hisseye izin verilir.</li>
+                    {activeMarket === 'CRYPTO' ? (
+                      <>
+                        <li><strong>Dinamik Kaldıraç:</strong> A+ sinyallere 5x, A sinyallere 3x, standart 2x kaldıraç.</li>
+                        <li><strong>%25 Nakit Kalkanı:</strong> 100 USDT sermayenin en az 25 USDT'si daima nakit korunur.</li>
+                        <li><strong>Likidasyon Koruması:</strong> Stop-Loss seviyesi daima likidasyon fiyatı öncesinde çalışır.</li>
+                        <li><strong>7/24 Kesintisiz Takip:</strong> Hafta sonu dahil 7/24 canlı tarama ve swing yönetimi.</li>
+                      </>
+                    ) : (
+                      <>
+                        <li><strong>Dinamik Bütçe Tahsisi:</strong> A+ Elit sinyallere %25, normal sinyallere %10 bütçe.</li>
+                        <li><strong>Kademeli Kâr Alma:</strong> TP1'de %50 kâr cebe konur, stop maliyete çekilir.</li>
+                        <li><strong>Başa-Baş Stop:</strong> Kâra geçmiş işlem asla zararla kapanmaz.</li>
+                        <li><strong>Sektör Sınırı:</strong> Aynı sektörden en fazla 3 hisseye izin verilir.</li>
+                      </>
+                    )}
                   </ul>
                 </div>
               </div>
