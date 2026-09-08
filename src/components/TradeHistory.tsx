@@ -6,9 +6,10 @@ import { CheckCircle2, XCircle, Clock, Award, Search, X } from 'lucide-react';
 
 interface TradeHistoryProps {
   history: TradePosition[];
+  currencySymbol?: string;
 }
 
-export const TradeHistory: React.FC<TradeHistoryProps> = ({ history }) => {
+export const TradeHistory: React.FC<TradeHistoryProps> = ({ history, currencySymbol }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   if (history.length === 0) {

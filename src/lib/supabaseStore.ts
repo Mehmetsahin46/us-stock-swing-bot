@@ -3,23 +3,46 @@ import { INITIAL_DUAL_STATE } from './constants';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 // In-memory fallback for when Supabase is not configured
-let memoryState: DualPortfolioState = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE));
+const memoryStates: Record<string, DualPortfolioState> = {};
 
-export async function getDualPortfolioState(): Promise<DualPortfolioState> {
+export async function getDualPortfolioState(userId: string = 'mehmet.sahin'): Promise<DualPortfolioState> {
+  const effectiveUser = (userId || 'mehmet.sahin').toLowerCase().trim();
+  const stateId = `user_${effectiveUser}`;
+
   if (!isSupabaseConfigured) {
-    return memoryState;
+    if (!memoryStates[effectiveUser]) {
+      const init = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE)) as DualPortfolioState;
+      init.userId = effectiveUser;
+      memoryStates[effectiveUser] = init;
+    }
+    return memoryStates[effectiveUser];
   }
 
   try {
     const { data, error } = await supabase!
       .from('portfolio_state')
       .select('state')
-      .eq('id', 'main')
+      .eq('id', stateId)
       .single();
 
     if (error || !data) {
-      console.warn('[SupabaseStore] No state found, returning initial state:', error?.message);
-      return JSON.parse(JSON.stringify(INITIAL_DUAL_STATE));
+      // Eğer kullanıcıya ait kayıt yoksa ve mehmet.sahin ise eski 'main' kaydını kontrol et
+      if (effectiveUser === 'mehmet.sahin') {
+        const { data: mainData } = await supabase!
+          .from('portfolio_state')
+          .select('state')
+          .eq('id', 'main')
+          .single();
+        if (mainData && mainData.state) {
+          const s = mainData.state as DualPortfolioState;
+          s.userId = effectiveUser;
+          return s;
+        }
+      }
+
+      const initial = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE)) as DualPortfolioState;
+      initial.userId = effectiveUser;
+      return initial;
     }
 
     const state = data.state as DualPortfolioState;
@@ -27,19 +50,30 @@ export async function getDualPortfolioState(): Promise<DualPortfolioState> {
       if (!state.crypto) {
         state.crypto = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.crypto));
       }
-      memoryState = state;
+      state.userId = effectiveUser;
+      memoryStates[effectiveUser] = state;
       return state;
     }
 
-    return JSON.parse(JSON.stringify(INITIAL_DUAL_STATE));
+    const initial = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE)) as DualPortfolioState;
+    initial.userId = effectiveUser;
+    return initial;
   } catch (err) {
     console.error('[SupabaseStore] Error reading state:', err);
-    return memoryState;
+    if (!memoryStates[effectiveUser]) {
+      const init = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE)) as DualPortfolioState;
+      init.userId = effectiveUser;
+      memoryStates[effectiveUser] = init;
+    }
+    return memoryStates[effectiveUser];
   }
 }
 
-export async function saveDualPortfolioState(newState: DualPortfolioState): Promise<void> {
-  memoryState = newState;
+export async function saveDualPortfolioState(newState: DualPortfolioState, userId?: string): Promise<void> {
+  const effectiveUser = (userId || newState.userId || 'mehmet.sahin').toLowerCase().trim();
+  const stateId = `user_${effectiveUser}`;
+  newState.userId = effectiveUser;
+  memoryStates[effectiveUser] = newState;
 
   if (!isSupabaseConfigured) {
     return;
@@ -49,7 +83,7 @@ export async function saveDualPortfolioState(newState: DualPortfolioState): Prom
     const { error } = await supabase!
       .from('portfolio_state')
       .upsert({
-        id: 'main',
+        id: stateId,
         state: newState,
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });

@@ -5,9 +5,10 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'rec
 
 interface EquityChartProps {
   data: { date: string; equity: number }[];
+  currencySymbol?: string;
 }
 
-export const EquityChart: React.FC<EquityChartProps> = ({ data }) => {
+export const EquityChart: React.FC<EquityChartProps> = ({ data, currencySymbol = '$' }) => {
   if (data.length <= 1) {
     return null;
   }
@@ -19,7 +20,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({ data }) => {
   return (
     <div className="p-5 rounded-xl bg-card border border-border">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-semibold text-white">Sanal Portföy Büyüme Eğrisi ($)</h3>
+        <h3 className="text-xs font-semibold text-white">Sanal Portföy Büyüme Eğrisi ({currencySymbol})</h3>
         <span className="text-[11px] text-muted">Zaman İçindeki Değer</span>
       </div>
       <div className="h-48 w-full">

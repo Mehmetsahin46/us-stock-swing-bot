@@ -203,6 +203,8 @@ export interface TradePosition {
   maxHoldingDays: number;
   estimatedDays?: number;
   estimatedTimeframe?: string;
+  isManualStop?: boolean; // Kullanıcı Stop-Loss'u elle sabitledi mi?
+  isManualTP?: boolean; // Kullanıcı Kâr Hedeflerini elle sabitledi mi?
   regimeAtEntry?: 'BULL' | 'CHOP' | 'BEAR';
 }
 
@@ -221,6 +223,9 @@ export interface MarketPortfolio {
   losingTrades: number;
   profitFactor: number;
   riskPerTradePct: number;
+  cashReservePct?: number; // Kasada tutulacak güvenli nakit oranı (%0 - %50, Varsayılan: 25)
+  maxPositionSizePct?: number; // Tek işleme verilecek maksimum bütçe oranı (%5 - %25)
+  maxLeverageCrypto?: number; // Kripto için max kaldıraç limiti (2, 3, 5)
   maxOpenPositions: number;
   maxHoldingDays: number;
   autoTrade: boolean;
@@ -233,6 +238,7 @@ export interface MarketPortfolio {
 }
 
 export interface DualPortfolioState {
+  userId?: string; // mehmet.sahin | salih.c | ilker.sahin
   bist: MarketPortfolio;
   us: MarketPortfolio;
   crypto?: MarketPortfolio;

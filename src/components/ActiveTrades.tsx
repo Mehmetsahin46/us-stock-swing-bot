@@ -7,9 +7,10 @@ import { Clock, Target, AlertOctagon, XCircle, ArrowUpRight, ArrowDownRight, Shi
 interface ActiveTradesProps {
   positions: TradePosition[];
   onManualClose: (positionId: string) => void;
+  onEditPosition?: (position: TradePosition) => void;
 }
 
-export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualClose }) => {
+export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualClose, onEditPosition }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   const openPositions = positions
@@ -194,14 +195,25 @@ export const ActiveTrades: React.FC<ActiveTradesProps> = ({ positions, onManualC
                 </td>
 
                 <td className="py-3.5 px-4 text-right">
-                  <button
-                    onClick={() => onManualClose(pos.id)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-danger-500/20 text-slate-300 hover:text-danger-400 border border-border hover:border-danger-500/40 transition-colors text-[11px] font-medium cursor-pointer"
-                    title="Pozisyonu Piyasa Fiyatından Kapat"
-                  >
-                    <XCircle className="w-3 h-3" />
-                    <span>Kapat</span>
-                  </button>
+                  <div className="flex items-center justify-end gap-1.5">
+                    {onEditPosition && (
+                      <button
+                        onClick={() => onEditPosition(pos)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-indigo-200 border border-indigo-500/30 transition-colors text-[11px] font-medium cursor-pointer"
+                        title="Manuel Stop ve Tepe Noktalarını Düzenle"
+                      >
+                        <span>✏️ Düzenle</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onManualClose(pos.id)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-danger-500/20 text-slate-300 hover:text-danger-400 border border-border hover:border-danger-500/40 transition-colors text-[11px] font-medium cursor-pointer"
+                      title="Pozisyonu Piyasa Fiyatından Kapat"
+                    >
+                      <XCircle className="w-3 h-3" />
+                      <span>Kapat</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             );

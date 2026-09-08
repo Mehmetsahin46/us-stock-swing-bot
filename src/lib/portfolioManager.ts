@@ -46,16 +46,17 @@ export function openPositionForMarket(
     return { portfolio: currentPortfolio, success: false, message: `${signal.sector} sekt\u00f6r\u00fcnden zaten ${sameSectorCount} a\u00e7\u0131k pozisyon var.` };
   }
 
-  // 🛡️ 1. MİNİMUM %25 NAKİT REZERVİ KALKANI (Cash Buffer Protection)
-  // Portföyün en az %25'i nakitte tutulur, tüm bakiye hisseye/coine bağlanamaz!
-  const minReserve = portfolio.totalEquity * 0.25;
+  // 🛡️ 1. KULLANICIYA ÖZEL GÜVENLİ NAKİT REZERVİ KALKANI (Custom Safe Cash Buffer)
+  // Kullanıcı ayarından gelen oran (%0 - %50), varsayılan %25
+  const reservePct = portfolio.cashReservePct !== undefined ? portfolio.cashReservePct : 25;
+  const minReserve = portfolio.totalEquity * (reservePct / 100);
   const availableCash = portfolio.cash - minReserve;
 
-  if (availableCash <= 0) {
+  if (availableCash <= 0 && reservePct > 0) {
     return { 
       portfolio: currentPortfolio, 
       success: false, 
-      message: `⚠️ Nakit Rezervi Kalkanı Devrede: Portföyün %25'i (en az ${portfolio.currencySymbol}${minReserve.toFixed(2)}) nakit olarak korunuyor. Yeni işlem açılamaz.` 
+      message: `⚠️ Güvenli Nakit Tamponu: Portföyün %${reservePct}'si (en az ${portfolio.currencySymbol}${minReserve.toFixed(2)}) nakit olarak korunuyor. Yeni işlem açılamaz.` 
     };
   }
 
@@ -378,4 +379,38 @@ export function recalculateMarketPortfolio(portfolio: MarketPortfolio) {
   } else {
     lastCurveEntry.equity = portfolio.totalEquity;
   }
+}
+
+export function updatePositionLevels(
+  currentPortfolio: MarketPortfolio,
+  positionId: string,
+  newStopLoss?: number,
+  newTarget1?: number,
+  newTarget2?: number
+): { portfolio: MarketPortfolio; success: boolean; message: string } {
+  const portfolio = JSON.parse(JSON.stringify(currentPortfolio)) as MarketPortfolio;
+  const pos = portfolio.positions.find(p => p.id === positionId && p.status === 'OPEN');
+  if (!pos) {
+    return { portfolio: currentPortfolio, success: false, message: 'Açık pozisyon bulunamadı.' };
+  }
+
+  const currSign = portfolio.currencySymbol;
+  if (newStopLoss !== undefined && newStopLoss > 0) {
+    pos.stopLoss = Number(newStopLoss.toFixed(2));
+    pos.isManualStop = true;
+  }
+  if (newTarget1 !== undefined && newTarget1 > 0) {
+    pos.target1 = Number(newTarget1.toFixed(2));
+    pos.isManualTP = true;
+  }
+  if (newTarget2 !== undefined && newTarget2 > 0) {
+    pos.target2 = Number(newTarget2.toFixed(2));
+    pos.isManualTP = true;
+  }
+
+  return {
+    portfolio,
+    success: true,
+    message: `✅ ${pos.displayTicker} seviyeleri güncellendi. Stop: ${currSign}${pos.stopLoss}, TP1: ${currSign}${pos.target1}, TP2: ${currSign}${pos.target2}`
+  };
 }

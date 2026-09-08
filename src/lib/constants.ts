@@ -17,6 +17,8 @@ export const INITIAL_BIST_PORTFOLIO: MarketPortfolio = {
   losingTrades: 0,
   profitFactor: 0,
   riskPerTradePct: 3.5,
+  cashReservePct: 25, // Varsayılan %25 nakit tamponu
+  maxPositionSizePct: 10,
   maxOpenPositions: 15,
   maxHoldingDays: 60,
   autoTrade: true,
@@ -43,6 +45,8 @@ export const INITIAL_US_PORTFOLIO: MarketPortfolio = {
   losingTrades: 0,
   profitFactor: 0,
   riskPerTradePct: 3.5,
+  cashReservePct: 25, // Varsayılan %25 nakit tamponu
+  maxPositionSizePct: 10,
   maxOpenPositions: 10,
   maxHoldingDays: 60,
   autoTrade: true,
@@ -69,6 +73,9 @@ export const INITIAL_CRYPTO_PORTFOLIO: MarketPortfolio = {
   losingTrades: 0,
   profitFactor: 0,
   riskPerTradePct: 3.5,
+  cashReservePct: 25, // Varsayılan %25 nakit tamponu
+  maxPositionSizePct: 15,
+  maxLeverageCrypto: 5,
   maxOpenPositions: 10,
   maxHoldingDays: 30,
   autoTrade: true,

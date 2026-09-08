@@ -22,21 +22,22 @@ import { DailyReportModal } from '@/components/DailyReportModal';
 import { NotificationRulesModal } from '@/components/NotificationRulesModal';
 import { SecurityCenterModal } from '@/components/SecurityCenterModal';
 import { StockSearchModal } from '@/components/StockSearchModal';
+import { LoginScreen } from '@/components/LoginScreen';
+import { EditPositionModal } from '@/components/EditPositionModal';
 import { 
   DualPortfolioState, 
   MarketPortfolio,
   MarketType, 
   Signal, 
-  StockScanResult 
+  StockScanResult,
+  TradePosition
 } from '@/lib/types';
 import { 
   openPositionForMarket, 
   manuallyClosePositionInMarket 
 } from '@/lib/portfolioManager';
 import { INITIAL_DUAL_STATE } from '@/lib/constants';
-import { mergeDualStates } from '@/lib/stateSync';
-import { sendLocalNotification } from '@/lib/notificationManager';
-import { isBISTOpen, isUSOpen } from '@/lib/marketHours';
+import { UserProfile, AUTH_STORAGE_KEY } from '@/lib/auth';
 import { 
   LayoutDashboard, 
   Radio, 
@@ -51,12 +52,12 @@ import {
   BarChart3,
   LayoutGrid,
   Star,
-  Search
+  Search,
+  Sparkles
 } from 'lucide-react';
 
-const STORAGE_KEY = 'dual_market_swing_portfolio_v7_supabase';
-
 export default function HomePage() {
+  const [activeUser, setActiveUser] = useState<UserProfile | null>(null);
   const [dualState, setDualState] = useState<DualPortfolioState>(INITIAL_DUAL_STATE);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
@@ -66,6 +67,7 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<
     'DASHBOARD' | 'TOP_OPPORTUNITIES' | 'SCANNER' | 'HEATMAP' | 'SIGNAL_ANALYTICS' | 'NEWS' | 'WATCHLIST' | 'HISTORY' | 'BACKTEST'
   >('DASHBOARD');
+  
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [searchModalOpen, setSearchModalOpen] = useState<boolean>(false);
   const [addStockOpen, setAddStockOpen] = useState<boolean>(false);
@@ -75,6 +77,8 @@ export default function HomePage() {
   const [dailyReportModalOpen, setDailyReportModalOpen] = useState<boolean>(false);
   const [notifRulesModalOpen, setNotifRulesModalOpen] = useState<boolean>(false);
   const [securityModalOpen, setSecurityModalOpen] = useState<boolean>(false);
+  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [editingPosition, setEditingPosition] = useState<TradePosition | null>(null);
 
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null);
   const [selectedResult, setSelectedResult] = useState<StockScanResult | null>(null);
@@ -85,94 +89,174 @@ export default function HomePage() {
     setTimeout(() => setToastMessage(null), 4500);
   }
 
-  // 1. Sync directly with Supabase server state (Single Source of Truth)
-  const syncWithServer = useCallback(async () => {
+  // 1. Sync directly with Supabase server state for active user
+  const syncWithServer = useCallback(async (userId?: string) => {
+    const effectiveUser = userId || activeUser?.id || 'mehmet.sahin';
     try {
-      const res = await fetch('/api/portfolio');
+      const res = await fetch(`/api/portfolio?userId=${encodeURIComponent(effectiveUser)}`, {
+        headers: { 'x-user-id': effectiveUser },
+        cache: 'no-store'
+      });
       const data = await res.json();
       if (data.success && data.state) {
         const serverState = data.state as DualPortfolioState;
-        // Migration: Eğer Kripto henüz işlem yapmamış ve eski 1000 USDT bakiyedeyse 100 USDT'ye güncelle
-        if (serverState.crypto && (serverState.crypto.initialBalance === 1000 || !serverState.crypto.initialBalance) && serverState.crypto.positions.length === 0) {
+        if (!serverState.crypto) {
           serverState.crypto = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.crypto));
-          saveStateToServer(serverState);
         }
         setDualState(serverState);
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(serverState));
-        } catch (e) {}
       }
     } catch (err) {
-      console.warn('[Sync] Offline or connection error, using local state.');
+      console.warn('[Sync] Offline or connection error.');
     }
-  }, []);
+  }, [activeUser]);
 
   // Save to Supabase
-  const saveStateToServer = async (stateToSave: DualPortfolioState) => {
+  const saveStateToServer = useCallback(async (stateToSave: DualPortfolioState) => {
+    const effectiveUser = activeUser?.id || 'mehmet.sahin';
     try {
-      await fetch('/api/portfolio', {
+      await fetch(`/api/portfolio?userId=${encodeURIComponent(effectiveUser)}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stateToSave)
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': effectiveUser
+        },
+        body: JSON.stringify({ state: stateToSave, userId: effectiveUser })
       });
     } catch (err) {
-      console.error('[Sync] Error posting state to server:', err);
+      console.error('[Save Error] Supabase state update failed:', err);
     }
-  };
+  }, [activeUser]);
 
-  // Initial Load: local fallback first, then immediate Supabase fetch
+  // Check saved session on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.bist && parsed.us) {
-          setDualState(mergeDualStates(parsed, INITIAL_DUAL_STATE));
-        }
+      const savedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (savedUser) {
+        const u = JSON.parse(savedUser) as UserProfile;
+        setActiveUser(u);
+        syncWithServer(u.id);
       }
     } catch (e) {}
-
-    syncWithServer().finally(() => setIsInitialized(true));
+    setIsInitialized(true);
   }, [syncWithServer]);
 
-  // Handle Settings Save
-  function handleSaveSettings(newBist: MarketPortfolio, newUs: MarketPortfolio) {
+  // Polling every 45 seconds for active user
+  useEffect(() => {
+    if (!activeUser) return;
+    const interval = setInterval(() => {
+      syncWithServer(activeUser.id);
+    }, 45000);
+    return () => clearInterval(interval);
+  }, [activeUser, syncWithServer]);
+
+  // Auto-scan on tab/load
+  useEffect(() => {
+    if (!activeUser) return;
+    handleScanMarket();
+  }, [activeUser]);
+
+  const handleLogin = (user: UserProfile) => {
+    setActiveUser(user);
+    try {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    } catch (e) {}
+    syncWithServer(user.id);
+    showToast(`Hoş geldiniz, ${user.displayName}! Portföyünüz yüklendi.`);
+  };
+
+  const handleLogout = () => {
+    setActiveUser(null);
+    try {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    } catch (e) {}
+    setDualState(INITIAL_DUAL_STATE);
+  };
+
+  // Open position from signal
+  function handleOpenTrade(signal: Signal) {
     setDualState(prev => {
-      const updated: DualPortfolioState = {
+      const targetPortfolio = signal.market === 'BIST' ? prev.bist : signal.market === 'CRYPTO' ? (prev.crypto || INITIAL_DUAL_STATE.crypto!) : prev.us;
+      const { portfolio: updated, success, message } = openPositionForMarket(signal, targetPortfolio);
+      
+      showToast(message);
+      if (!success) return prev;
+
+      const nextState: DualPortfolioState = {
         ...prev,
-        bist: newBist,
-        us: newUs
+        [signal.market === 'BIST' ? 'bist' : signal.market === 'CRYPTO' ? 'crypto' : 'us']: updated
       };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (e) {}
-      saveStateToServer(updated);
-      return updated;
+      saveStateToServer(nextState);
+      return nextState;
     });
-    showToast('Ayarlar Supabase bulutuna ve yerel hafızaya kaydedildi.');
   }
 
-  // Reset Market
-  function handleResetMarket(market: MarketType) {
+  // Close position manually
+  function handleClosePosition(positionId: string) {
     setDualState(prev => {
-      const updated = JSON.parse(JSON.stringify(prev)) as DualPortfolioState;
-      if (market === 'BIST') {
-        updated.bist = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.bist));
-      } else if (market === 'CRYPTO') {
-        updated.crypto = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.crypto));
-      } else {
-        updated.us = JSON.parse(JSON.stringify(INITIAL_DUAL_STATE.us));
-      }
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (e) {}
-      saveStateToServer(updated);
-      return updated;
+      const targetPortfolio = activeMarket === 'BIST' ? prev.bist : activeMarket === 'CRYPTO' ? (prev.crypto || INITIAL_DUAL_STATE.crypto!) : prev.us;
+      const { portfolio: updated, success, message } = manuallyClosePositionInMarket(targetPortfolio, positionId);
+      
+      showToast(message);
+      if (!success) return prev;
+
+      const nextState: DualPortfolioState = {
+        ...prev,
+        [activeMarket === 'BIST' ? 'bist' : activeMarket === 'CRYPTO' ? 'crypto' : 'us']: updated
+      };
+      saveStateToServer(nextState);
+      return nextState;
     });
-    showToast(`${market} portföyü ve işlem geçmişi sıfırlandı.`);
   }
 
-  // Trigger Live Scan
+  // Manual Stop/TP Edit Save
+  async function handleSavePositionLevels(positionId: string, stopLoss: number, target1: number, target2: number) {
+    try {
+      const res = await fetch('/api/positions/update', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': activeUser?.id || 'mehmet.sahin'
+        },
+        body: JSON.stringify({
+          market: activeMarket,
+          positionId,
+          stopLoss,
+          target1,
+          target2
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'Seviyeler başarıyla güncellendi!');
+        await syncWithServer();
+      } else {
+        showToast(`Hata: ${data.error || data.message}`);
+      }
+    } catch (e: any) {
+      showToast(`Hata: ${e?.message}`);
+    }
+  }
+
+  // Reset portfolio
+  async function handleResetMarket(market: 'BIST' | 'US' | 'CRYPTO') {
+    try {
+      const res = await fetch('/api/portfolio', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': activeUser?.id || 'mehmet.sahin'
+        },
+        body: JSON.stringify({ action: 'RESET_MARKET', market, userId: activeUser?.id })
+      });
+      const data = await res.json();
+      if (data.success && data.state) {
+        setDualState(data.state);
+      }
+      showToast(`${market} portföyü ve işlem geçmişi sıfırlandı.`);
+    } catch (e) {}
+  }
+
+  // Trigger Live Scan & Auto-trade
   async function handleScanMarket() {
     setIsScanning(true);
     try {
@@ -189,148 +273,43 @@ export default function HomePage() {
       await syncWithServer();
 
       if (cronData.logs && cronData.logs.length > 0) {
-        showToast(`İşlem: ${cronData.logs.slice(0, 2).join(' | ')}`);
+        showToast(`Tarama tamamlandı (${cronData.scannedCount || 0} enstrüman).`);
       } else {
         showToast('Piyasalar tarandı ve pozisyonlar güncellendi.');
       }
     } catch (err) {
-      console.error(err);
-      showToast('Piyasa taranırken bağlantı hatası oluştu.');
+      showToast('Piyasa tarama hatası, lütfen tekrar deneyin.');
     } finally {
       setIsScanning(false);
     }
   }
 
-  useEffect(() => {
-    handleScanMarket();
-    const interval = setInterval(() => {
-      if (isBISTOpen() || isUSOpen()) {
-        handleScanMarket();
-      }
-    }, 30000);
-
-    // 🔍 Ctrl+K / Cmd+K Global Search Shortcut
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setSearchModalOpen(true);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
-
+  // Current active portfolio view
   const currentPortfolio: MarketPortfolio = 
     activeMarket === 'BIST' 
       ? dualState.bist 
       : activeMarket === 'CRYPTO' 
-      ? (dualState.crypto || INITIAL_DUAL_STATE.crypto || INITIAL_DUAL_STATE.us) 
-      : dualState.us;
-
-  const currentRegime = 
-    activeMarket === 'BIST' 
-      ? dualState.bistRegime 
-      : activeMarket === 'CRYPTO' 
-      ? dualState.cryptoRegime 
-      : dualState.usRegime;
-
-  function handleOpenPaperTrade(signal: Signal) {
-    const targetPortfolio = 
-      signal.market === 'BIST' 
-        ? dualState.bist 
-        : signal.market === 'CRYPTO' 
-        ? (dualState.crypto || INITIAL_DUAL_STATE.crypto || INITIAL_DUAL_STATE.us) 
+        ? (dualState.crypto || INITIAL_DUAL_STATE.crypto!) 
         : dualState.us;
 
-    const { portfolio: newPort, success, message } = openPositionForMarket(signal, targetPortfolio);
+  if (!isInitialized) return null;
 
-    if (success) {
-      setDualState(prev => {
-        const updated = {
-          ...prev,
-          bist: signal.market === 'BIST' ? newPort : prev.bist,
-          us: signal.market === 'US' ? newPort : prev.us,
-          crypto: signal.market === 'CRYPTO' ? newPort : (prev.crypto || INITIAL_DUAL_STATE.crypto),
-          activityLogs: [
-            {
-              id: `log_${Date.now()}_${signal.ticker}`,
-              timestamp: new Date().toISOString(),
-              market: signal.market,
-              message,
-              type: 'BUY' as const
-            },
-            ...prev.activityLogs
-          ]
-        };
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        } catch (e) {}
-        saveStateToServer(updated);
-        return updated;
-      });
-
-      sendLocalNotification(`🎯 Yeni İşlem: ${signal.displayTicker}`, {
-        body: `${signal.displayTicker} için ${signal.strategyName} ile alım emri açıldı. Hedef: ${signal.target2}`
-      });
-
-      showToast(`İşlem Açıldı: ${signal.displayTicker} (${signal.suggestedEntry})`);
-    } else {
-      showToast(message);
-    }
+  // Render LoginScreen if not authenticated
+  if (!activeUser) {
+    return <LoginScreen onLoginSuccess={handleLogin} />;
   }
-
-  function handleManualClose(positionId: string) {
-    const targetPortfolio = 
-      activeMarket === 'BIST' 
-        ? dualState.bist 
-        : activeMarket === 'CRYPTO' 
-        ? (dualState.crypto || INITIAL_DUAL_STATE.crypto || INITIAL_DUAL_STATE.us) 
-        : dualState.us;
-
-    const { portfolio: newPort, success, message } = manuallyClosePositionInMarket(targetPortfolio, positionId);
-
-    if (success) {
-      setDualState(prev => {
-        const updated = {
-          ...prev,
-          bist: activeMarket === 'BIST' ? newPort : prev.bist,
-          us: activeMarket === 'US' ? newPort : prev.us,
-          crypto: activeMarket === 'CRYPTO' ? newPort : (prev.crypto || INITIAL_DUAL_STATE.crypto),
-          activityLogs: [
-            {
-              id: `log_${Date.now()}_${positionId}`,
-              timestamp: new Date().toISOString(),
-              market: activeMarket,
-              message,
-              type: 'SELL' as const
-            },
-            ...prev.activityLogs
-          ]
-        };
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        } catch (e) {}
-        saveStateToServer(updated);
-        return updated;
-      });
-      showToast(message);
-    } else {
-      showToast(message);
-    }
-  }
-
-  const openPositionTickers = currentPortfolio.positions
-    .filter(p => p.status === 'OPEN')
-    .map(p => p.ticker);
-
-  const allActiveSignals = scanResults.map(r => r.signal).filter((s): s is Signal => s !== null);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-primary-500 selection:text-white">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-primary-500/50 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-fade-in text-xs font-semibold backdrop-blur-md">
+          <div className="w-2 h-2 rounded-full bg-primary-400 animate-ping" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Header */}
       <Header
         onScan={handleScanMarket}
         isScanning={isScanning}
@@ -342,6 +321,8 @@ export default function HomePage() {
         onOpenDailyReport={() => setDailyReportModalOpen(true)}
         onOpenNotifRules={() => setNotifRulesModalOpen(true)}
         onOpenSecurity={() => setSecurityModalOpen(true)}
+        activeUser={activeUser}
+        onLogout={handleLogout}
         lastScanTime={dualState.lastScanTime}
         activeMarket={activeMarket}
         onSelectMarket={setActiveMarket}
@@ -353,197 +334,200 @@ export default function HomePage() {
         usRegime={dualState.usRegime}
       />
 
-      {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl bg-surface border border-primary-500/40 text-primary-300 text-xs font-medium shadow-2xl animate-fade-in flex items-center gap-2">
-          <Bell className="w-4 h-4 text-primary-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 space-y-6">
+      {/* Main Container */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
         {/* Navigation Tabs */}
-        <div className="flex items-center justify-between border-b border-border/80 pb-3 overflow-x-auto gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab('DASHBOARD')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'DASHBOARD'
-                  ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25'
-                  : 'text-slate-400 hover:text-white hover:bg-card'
-              }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>{activeMarket === 'BIST' ? '🇹🇷 BIST Portföyü' : activeMarket === 'CRYPTO' ? '🪙 Kripto Portföyü' : '🇺🇸 ABD Portföyü'}</span>
-              {openPositionTickers.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-white text-[10px] font-bold">
-                  {openPositionTickers.length}
-                </span>
-              )}
-            </button>
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-border/80 scrollbar-none text-xs">
+          <button
+            onClick={() => setActiveTab('DASHBOARD')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-extrabold transition-all cursor-pointer flex-shrink-0 ${
+              activeTab === 'DASHBOARD'
+                ? activeMarket === 'BIST'
+                  ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
+                  : activeMarket === 'CRYPTO'
+                  ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                  : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'bg-card hover:bg-slate-800 text-slate-400 hover:text-white border border-border/60'
+            }`}
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            <span>
+              {activeMarket === 'BIST' ? '🇹🇷 BIST Portföyü' : activeMarket === 'CRYPTO' ? '🪙 Kripto Portföyü' : '🇺🇸 ABD Portföyü'}
+            </span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/30 font-mono">
+              {currentPortfolio.positions.filter(p => p.status === 'OPEN').length}
+            </span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('TOP_OPPORTUNITIES')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'TOP_OPPORTUNITIES'
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-white shadow-md shadow-amber-500/25'
-                  : 'text-amber-400/90 hover:text-amber-300 hover:bg-card'
-              }`}
-            >
-              <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-              <span>Günün Fırsatları (A+)</span>
-            </button>
+          <button
+            onClick={() => setActiveTab('TOP_OPPORTUNITIES')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer flex-shrink-0 ${
+              activeTab === 'TOP_OPPORTUNITIES'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                : 'bg-card hover:bg-slate-800 text-slate-400 hover:text-white border border-border/60'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 text-amber-400" />
+            <span>Günün Fırsatları (A+)</span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('SCANNER')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'SCANNER'
-                  ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25'
-                  : 'text-slate-400 hover:text-white hover:bg-card'
-              }`}
-            >
-              <Radio className="w-3.5 h-3.5" />
-              <span>Canlı Tarayıcı</span>
-            </button>
+          <button
+            onClick={() => setActiveTab('SCANNER')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer flex-shrink-0 ${
+              activeTab === 'SCANNER'
+                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/40 shadow-sm'
+                : 'bg-card hover:bg-slate-800 text-slate-400 hover:text-white border border-border/60'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            <span>Canlı Tarayıcı</span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('HEATMAP')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'HEATMAP'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25'
-                  : 'text-slate-400 hover:text-white hover:bg-card'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Isı Haritası</span>
-            </button>
+          <button
+            onClick={() => setActiveTab('HEATMAP')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer flex-shrink-0 ${
+              activeTab === 'HEATMAP'
+                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm'
+                : 'bg-card hover:bg-slate-800 text-slate-400 hover:text-white border border-border/60'
+            }`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Isı Haritası</span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('SIGNAL_ANALYTICS')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'SIGNAL_ANALYTICS'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/25'
-                  : 'text-emerald-400/90 hover:text-emerald-300 hover:bg-card'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Sinyal Analitiği</span>
-            </button>
+          <button
+            onClick={() => setActiveTab('SIGNAL_ANALYTICS')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer flex-shrink-0 ${
+              activeTab === 'SIGNAL_ANALYTICS'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                : 'bg-card hover:bg-slate-800 text-slate-400 hover:text-white border border-border/60'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Sinyal Analitiği</span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('NEWS')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'NEWS'
-                  ? 'bg-indigo-500 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white hover:bg-card'
-              }`}
-            >
-              <Newspaper className="w-3.5 h-3.5" />
-              <span>Haberler & Bilanço</span>
-            </button>
+          <button
+            onClick={() => setActiveTab('NEWS')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer flex-shrink-0 ${
+              activeTab === 'NEWS'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                : 'bg-card hover:bg-slate-800 text-slate-400 hover:text-white border border-border/60'
+            }`}
+          >
+            <Newspaper className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Haberler & Bilanço</span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('WATCHLIST')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'WATCHLIST'
-                  ? 'bg-amber-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white hover:bg-card'
-              }`}
-            >
-              <Star className="w-3.5 h-3.5 text-amber-400" />
-              <span>İzleme Listesi</span>
-            </button>
+          <button
+            onClick={() => setActiveTab('WATCHLIST')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer flex-shrink-0 ${
+              activeTab === 'WATCHLIST'
+                ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 shadow-sm'
+                : 'bg-card hover:bg-slate-800 text-slate-400 hover:text-white border border-border/60'
+            }`}
+          >
+            <Star className="w-3.5 h-3.5 text-yellow-400" />
+            <span>İzleme Listesi</span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('HISTORY')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'HISTORY'
-                  ? 'bg-primary-500 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white hover:bg-card'
-              }`}
-            >
-              <History className="w-3.5 h-3.5" />
-              <span>İşlem Geçmişi ({currentPortfolio.history.length})</span>
-            </button>
+          <button
+            onClick={() => setActiveTab('HISTORY')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer flex-shrink-0 ${
+              activeTab === 'HISTORY'
+                ? 'bg-slate-800 text-white border border-slate-700 shadow-sm'
+                : 'bg-card hover:bg-slate-800 text-slate-400 hover:text-white border border-border/60'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>İşlem Geçmişi ({currentPortfolio.history.length})</span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('BACKTEST')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'BACKTEST'
-                  ? 'bg-accent-500 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white hover:bg-card'
-              }`}
-            >
-              <PlayCircle className="w-3.5 h-3.5" />
-              <span>Backtest</span>
-            </button>
-          </div>
+          <button
+            onClick={() => setActiveTab('BACKTEST')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer flex-shrink-0 ${
+              activeTab === 'BACKTEST'
+                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40 shadow-sm'
+                : 'bg-card hover:bg-slate-800 text-slate-400 hover:text-white border border-border/60'
+            }`}
+          >
+            <PlayCircle className="w-3.5 h-3.5" />
+            <span>Backtest</span>
+          </button>
 
-          {/* Quick Universal Search Trigger */}
           <button
             onClick={() => setSearchModalOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-all cursor-pointer flex-shrink-0 shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all cursor-pointer ml-auto border border-slate-700/80"
           >
-            <Search className="w-3.5 h-3.5 text-indigo-400" />
+            <Search className="w-3.5 h-3.5 text-slate-400" />
             <span className="hidden sm:inline">Hisse / Sembol Ara</span>
-            <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono">⌘K</kbd>
+            <kbd className="hidden md:inline px-1.5 py-0.5 rounded bg-slate-900 text-[10px] text-slate-400 font-mono">⌘K</kbd>
           </button>
         </div>
 
-        {/* TAB 1: DASHBOARD */}
+        {/* Tab 1: Dashboard */}
         {activeTab === 'DASHBOARD' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
+            {/* Top Metric Cards */}
             <PortfolioCards portfolio={currentPortfolio} />
 
+            {/* Main Grid: Active Trades + Equity Chart */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-white">
-                    {activeMarket === 'BIST' 
-                      ? '🇹🇷 BIST Açık Pozisyonlar (60 Gün Trend)' 
-                      : activeMarket === 'CRYPTO'
-                      ? '🪙 Kripto 7/24 Kaldıraçlı Açık Pozisyonlar (30 Gün Trend)'
-                      : '🇺🇸 ABD Açık Pozisyonlar (60 Gün Trend)'}
-                  </h2>
-                  <span className="text-xs text-muted">
-                    {openPositionTickers.length} / {currentPortfolio.maxOpenPositions} Pozisyon
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2.5 h-2.5 rounded-full ${activeMarket === 'BIST' ? 'bg-rose-500' : activeMarket === 'CRYPTO' ? 'bg-amber-500' : 'bg-indigo-500'}`} />
+                    <h2 className="text-sm font-bold text-white">
+                      {activeMarket === 'BIST'
+                        ? '🇹🇷 Borsa İstanbul Açık Pozisyonlar (14 Gün Max)'
+                        : activeMarket === 'CRYPTO'
+                        ? '🪙 Kripto 7/24 Kaldıraçlı Açık Pozisyonlar'
+                        : '🇺🇸 ABD Borsası Açık Pozisyonlar (14 Gün Max)'}
+                    </h2>
+                  </div>
+                  <span className="text-xs text-muted font-mono">
+                    {currentPortfolio.positions.filter(p => p.status === 'OPEN').length} / {currentPortfolio.maxOpenPositions} Pozisyon
                   </span>
                 </div>
+
                 <ActiveTrades
                   positions={currentPortfolio.positions}
-                  onManualClose={handleManualClose}
+                  onManualClose={handleClosePosition}
+                  onEditPosition={pos => {
+                    setEditingPosition(pos);
+                    setEditModalOpen(true);
+                  }}
                 />
               </div>
 
-              <div className="space-y-4">
-                <EquityChart data={currentPortfolio.equityCurve} />
+              {/* Sidebar: Equity Chart & Risk Shields */}
+              <div className="space-y-6">
+                <EquityChart
+                  data={currentPortfolio.equityCurve}
+                  currencySymbol={currentPortfolio.currencySymbol}
+                />
 
-                {/* Safety & Automation Card */}
-                <div className="p-4 rounded-xl bg-card border border-border text-xs space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-white flex items-center gap-1.5">
+                {/* Safe Cash & Risk Shield Card */}
+                <div className="p-5 rounded-2xl bg-card border border-border space-y-3">
+                  <div className="flex items-center justify-between border-b border-border/80 pb-2">
+                    <div className="flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      <span>{activeMarket === 'BIST' ? 'BIST' : activeMarket === 'CRYPTO' ? 'Kripto Kaldıraç &' : 'ABD'} Güvenlik Kalkanı</span>
-                    </h3>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold">
-                      Korumalar Aktif
+                      <h3 className="text-xs font-bold text-white">Risk & Güvenli Nakit Kalkanı</h3>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-500/20 text-emerald-300">
+                      Aktif
                     </span>
                   </div>
-                  <ul className="text-muted space-y-1.5 list-disc pl-4 text-[11px]">
-                    {activeMarket === 'CRYPTO' ? (
-                      <>
-                        <li><strong>Dinamik Kaldıraç:</strong> A+ sinyallere 5x, A sinyallere 3x, standart 2x kaldıraç.</li>
-                        <li><strong>%25 Nakit Kalkanı:</strong> 100 USDT sermayenin en az 25 USDT'si daima nakit korunur.</li>
-                        <li><strong>Likidasyon Koruması:</strong> Stop-Loss seviyesi daima likidasyon fiyatı öncesinde çalışır.</li>
-                        <li><strong>7/24 Kesintisiz Takip:</strong> Hafta sonu dahil 7/24 canlı tarama ve swing yönetimi.</li>
-                      </>
-                    ) : (
-                      <>
-                        <li><strong>Dinamik Bütçe Tahsisi:</strong> A+ Elit sinyallere %25, normal sinyallere %10 bütçe.</li>
-                        <li><strong>Kademeli Kâr Alma:</strong> TP1'de %50 kâr cebe konur, stop maliyete çekilir.</li>
-                        <li><strong>Başa-Baş Stop:</strong> Kâra geçmiş işlem asla zararla kapanmaz.</li>
-                        <li><strong>Sektör Sınırı:</strong> Aynı sektörden en fazla 3 hisseye izin verilir.</li>
-                      </>
-                    )}
+                  <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside">
+                    <li>
+                      <strong>Güvenli Nakit Tamponu:</strong> Kasanın %{currentPortfolio.cashReservePct ?? 25}'si ({currentPortfolio.currencySymbol}{((currentPortfolio.totalEquity * (currentPortfolio.cashReservePct ?? 25)) / 100).toFixed(2)}) daima nakit korunur.
+                    </li>
+                    <li>
+                      <strong>Manuel Seviye Yönetimi:</strong> Açık pozisyonlarda <em>✏️ Düzenle</em> butonuna basarak Stop ve TP seviyelerini elle sabitleyebilirsiniz.
+                    </li>
+                    <li>
+                      <strong>Kullanıcı İzolasyonu:</strong> Sayfanızdaki tüm işlemler ve ayarlar sadece <strong>@{activeUser.username}</strong> hesabınıza aittir.
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -551,11 +535,11 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* TAB: TOP OPPORTUNITIES */}
+        {/* Tab 2: Top Opportunities */}
         {activeTab === 'TOP_OPPORTUNITIES' && (
           <TopOpportunitiesPanel
             results={scanResults}
-            onOpenTrade={handleOpenPaperTrade}
+            onOpenTrade={handleOpenTrade}
             onOpenDetail={(sig, res) => {
               setSelectedSignal(sig);
               setSelectedResult(res);
@@ -564,75 +548,105 @@ export default function HomePage() {
           />
         )}
 
-        {/* TAB 2: LIVE SCANNER */}
+        {/* Tab 3: Scanner */}
         {activeTab === 'SCANNER' && (
           <ScannerView
             results={scanResults}
-            onOpenTrade={handleOpenPaperTrade}
-            openPositionTickers={openPositionTickers}
+            onOpenTrade={handleOpenTrade}
+            openPositionTickers={currentPortfolio.positions.filter(p => p.status === 'OPEN').map(p => p.ticker)}
             onOpenAddStock={() => setAddStockOpen(true)}
           />
         )}
 
-        {/* TAB: MARKET HEATMAP */}
+        {/* Tab 4: Heatmap */}
         {activeTab === 'HEATMAP' && (
           <MarketHeatmapView
             results={scanResults}
-            onOpenTrade={handleOpenPaperTrade}
+            onOpenTrade={handleOpenTrade}
           />
         )}
 
-        {/* TAB: SIGNAL ANALYTICS */}
+        {/* Tab 5: Analytics */}
         {activeTab === 'SIGNAL_ANALYTICS' && (
-          <SignalAnalyticsView
-            onOpenTrade={handleOpenPaperTrade}
-          />
+          <SignalAnalyticsView onOpenTrade={handleOpenTrade} />
         )}
 
-        {/* TAB 3: NEWS & CATALYSTS */}
+        {/* Tab 6: News */}
         {activeTab === 'NEWS' && (
           <NewsView
             results={scanResults}
-            onOpenTrade={handleOpenPaperTrade}
+            onOpenTrade={handleOpenTrade}
           />
         )}
 
-        {/* TAB: WATCHLIST */}
+        {/* Tab 7: Watchlist */}
         {activeTab === 'WATCHLIST' && (
           <WatchlistView
             results={scanResults}
-            onOpenTrade={handleOpenPaperTrade}
+            onOpenTrade={handleOpenTrade}
             onOpenAddStock={() => setAddStockOpen(true)}
           />
         )}
 
-        {/* TAB 4: TRADE HISTORY */}
+        {/* Tab 8: History */}
         {activeTab === 'HISTORY' && (
-          <TradeHistory history={currentPortfolio.history} />
+          <TradeHistory
+            history={currentPortfolio.history}
+            currencySymbol={currentPortfolio.currencySymbol}
+          />
         )}
 
-        {/* TAB: BACKTEST */}
+        {/* Tab 9: Backtest */}
         {activeTab === 'BACKTEST' && (
           <BacktestView />
         )}
       </main>
 
+      {/* Modals */}
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         bistPortfolio={dualState.bist}
         usPortfolio={dualState.us}
-        onSave={handleSaveSettings}
+        cryptoPortfolio={dualState.crypto}
+        onSave={(b, u, c) => {
+          setDualState(prev => {
+            const next: DualPortfolioState = { ...prev, bist: b, us: u, crypto: c || prev.crypto };
+            saveStateToServer(next);
+            return next;
+          });
+          showToast('Kişisel ayarlarınız başarıyla kaydedildi.');
+        }}
         onResetMarket={handleResetMarket}
+      />
+
+      <EditPositionModal
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setEditingPosition(null);
+        }}
+        position={editingPosition}
+        market={activeMarket}
+        onSave={handleSavePositionLevels}
       />
 
       <AddStockModal
         isOpen={addStockOpen}
         onClose={() => setAddStockOpen(false)}
         defaultMarket={activeMarket}
-        onStockAdded={() => {
-          handleScanMarket();
-          showToast('Özel hisse başarıyla eklendi ve canlı taramaya dahil edildi.');
+        onStockAdded={() => handleScanMarket()}
+      />
+
+      <StockSearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        scanResults={scanResults}
+        onOpenTrade={handleOpenTrade}
+        onOpenDetail={(sig, res) => {
+          setSelectedSignal(sig);
+          setSelectedResult(res);
+          setDetailModalOpen(true);
         }}
       />
 
@@ -646,7 +660,7 @@ export default function HomePage() {
         onClose={() => setDetailModalOpen(false)}
         signal={selectedSignal}
         result={selectedResult}
-        onOpenTrade={handleOpenPaperTrade}
+        onOpenTrade={handleOpenTrade}
       />
 
       <SystemHealthModal
@@ -657,11 +671,10 @@ export default function HomePage() {
       <DailyReportModal
         isOpen={dailyReportModalOpen}
         onClose={() => setDailyReportModalOpen(false)}
-        signals={allActiveSignals}
+        signals={scanResults.map(r => r.signal).filter((s): s is Signal => s !== null)}
         bistPortfolio={dualState.bist}
         usPortfolio={dualState.us}
-        macro={null}
-        onOpenTrade={handleOpenPaperTrade}
+        onOpenTrade={handleOpenTrade}
       />
 
       <NotificationRulesModal
@@ -672,18 +685,6 @@ export default function HomePage() {
       <SecurityCenterModal
         isOpen={securityModalOpen}
         onClose={() => setSecurityModalOpen(false)}
-      />
-
-      <StockSearchModal
-        isOpen={searchModalOpen}
-        onClose={() => setSearchModalOpen(false)}
-        scanResults={scanResults}
-        onOpenTrade={handleOpenPaperTrade}
-        onOpenDetail={(sig, res) => {
-          setSelectedSignal(sig);
-          setSelectedResult(res);
-          setDetailModalOpen(true);
-        }}
       />
     </div>
   );
