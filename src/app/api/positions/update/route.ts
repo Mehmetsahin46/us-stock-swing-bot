@@ -8,8 +8,6 @@ export const revalidate = 0;
 
 export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = request.headers.get('x-user-id') || searchParams.get('userId') || 'mehmet.sahin';
     const body = await request.json();
     const { market, positionId, stopLoss, target1, target2 } = body as {
       market: MarketType;
@@ -23,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Eksik parametre.' }, { status: 400 });
     }
 
-    const dualState = await getDualPortfolioState(userId);
+    const dualState = await getDualPortfolioState();
     const targetPortfolio = market === 'BIST' ? dualState.bist : market === 'CRYPTO' ? dualState.crypto : dualState.us;
 
     if (!targetPortfolio) {
@@ -43,7 +41,7 @@ export async function POST(request: NextRequest) {
       else if (market === 'CRYPTO') dualState.crypto = updatedPortfolio;
       else dualState.us = updatedPortfolio;
 
-      await saveDualPortfolioState(dualState, userId);
+      await saveDualPortfolioState(dualState);
       return NextResponse.json({ success: true, message, portfolio: updatedPortfolio });
     } else {
       return NextResponse.json({ success: false, message }, { status: 400 });
