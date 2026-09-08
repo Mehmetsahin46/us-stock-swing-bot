@@ -47,9 +47,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
         {/* Quick User Selection Cards */}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-300">Kullanıcı Hesabı Seçin:</label>
+          <label className="text-xs font-bold text-slate-300">Giriş Yapılacak Hesap:</label>
           <div className="grid grid-cols-3 gap-2">
-            {Object.values(USERS).map(u => {
+            {Object.values(USERS).map((u, idx) => {
               const isSelected = selectedUsername === u.profile.username;
               return (
                 <button
@@ -63,8 +63,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                   }`}
                 >
                   <span className="text-2xl">{u.profile.avatar}</span>
-                  <span className="text-xs font-bold truncate w-full">{u.profile.displayName}</span>
-                  <span className="text-[10px] text-slate-400 font-mono truncate w-full">@{u.profile.username}</span>
+                  <span className="text-xs font-bold truncate w-full">Hesap {idx + 1}</span>
+                  <span className="text-[10px] text-slate-400 font-mono truncate w-full">***</span>
                 </button>
               );
             })}

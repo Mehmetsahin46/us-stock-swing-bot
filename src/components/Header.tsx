@@ -250,18 +250,18 @@ export const Header: React.FC<HeaderProps> = ({
           <Settings className="w-4 h-4" />
         </button>
 
-        {/* User Profile Badge & Logout */}
+        {/* User Profile Badge & Logout (Anonymous / Privacy Protected) */}
         {activeUser && (
           <div className="flex items-center gap-2 pl-2 border-l border-border/80">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700 text-xs font-bold text-white shadow-sm">
-              <span>{activeUser.avatar}</span>
-              <span className="hidden sm:inline">{activeUser.displayName}</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700 text-xs font-bold text-slate-300 shadow-sm" title="Güvenli Oturum Aktif">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Oturum Açık</span>
             </div>
             {onLogout && (
               <button
                 onClick={onLogout}
                 className="px-2 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[11px] font-semibold transition-all cursor-pointer"
-                title="Oturumu Kapat / Kullanıcı Değiştir"
+                title="Oturumu Kapat"
               >
                 Çıkış
               </button>

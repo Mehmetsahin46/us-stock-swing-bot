@@ -149,19 +149,13 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [activeUser, syncWithServer]);
 
-  // Auto-scan on tab/load
-  useEffect(() => {
-    if (!activeUser) return;
-    handleScanMarket();
-  }, [activeUser]);
-
   const handleLogin = (user: UserProfile) => {
     setActiveUser(user);
     try {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
     } catch (e) {}
     syncWithServer(user.id);
-    showToast(`Hoş geldiniz, ${user.displayName}! Portföyünüz yüklendi.`);
+    showToast('Güvenli oturum açıldı. Portföyünüz yüklendi.');
   };
 
   const handleLogout = () => {
@@ -260,25 +254,26 @@ export default function HomePage() {
   async function handleScanMarket() {
     setIsScanning(true);
     try {
-      const scanRes = await fetch('/api/market/scan', { cache: 'no-store' });
-      const scanData = await scanRes.json();
+      // 1. Cron motorunu tetikle (Pozisyonları, fiyatları ve alım/satımları günceller)
+      const cronPromise = fetch('/api/cron', { cache: 'no-store' })
+        .then(r => r.json())
+        .catch(() => null);
 
-      if (scanData.success && scanData.results) {
-        setScanResults(scanData.results);
-      }
+      // 2. Tarayıcı sonuçlarını güncelle
+      const scanPromise = fetch('/api/market/scan', { cache: 'no-store' })
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.success && data.results) {
+            setScanResults(data.results);
+          }
+        })
+        .catch(() => null);
 
-      const cronRes = await fetch('/api/cron', { cache: 'no-store' });
-      const cronData = await cronRes.json();
-
+      await Promise.all([cronPromise, scanPromise]);
       await syncWithServer();
-
-      if (cronData.logs && cronData.logs.length > 0) {
-        showToast(`Tarama tamamlandı (${cronData.scannedCount || 0} enstrüman).`);
-      } else {
-        showToast('Piyasalar tarandı ve pozisyonlar güncellendi.');
-      }
+      showToast('Piyasalar güncellendi ve portföy senkronize edildi.');
     } catch (err) {
-      showToast('Piyasa tarama hatası, lütfen tekrar deneyin.');
+      console.warn('[Scan] Soft scan notice:', err);
     } finally {
       setIsScanning(false);
     }
@@ -526,7 +521,7 @@ export default function HomePage() {
                       <strong>Manuel Seviye Yönetimi:</strong> Açık pozisyonlarda <em>✏️ Düzenle</em> butonuna basarak Stop ve TP seviyelerini elle sabitleyebilirsiniz.
                     </li>
                     <li>
-                      <strong>Kullanıcı İzolasyonu:</strong> Sayfanızdaki tüm işlemler ve ayarlar sadece <strong>@{activeUser.username}</strong> hesabınıza aittir.
+                      <strong>Kullanıcı İzolasyonu:</strong> Sayfanızdaki tüm işlemler, bakiye ve ayarlar sadece bu oturuma özeldir ve tamamen gizlidir.
                     </li>
                   </ul>
                 </div>
