@@ -19,6 +19,7 @@ interface HeaderProps {
   onOpenSecurity?: () => void;
   activeUser?: UserProfile | null;
   onLogout?: () => void;
+  onSwitchUser?: (user: UserProfile) => void;
   lastScanTime: string | null;
   activeMarket: MarketType;
   onSelectMarket: (m: MarketType) => void;
@@ -43,6 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSecurity,
   activeUser,
   onLogout,
+  onSwitchUser,
   lastScanTime,
   activeMarket,
   onSelectMarket,
@@ -250,22 +252,25 @@ export const Header: React.FC<HeaderProps> = ({
           <Settings className="w-4 h-4" />
         </button>
 
-        {/* User Profile Badge & Logout (Anonymous / Privacy Protected) */}
+        {/* User Account Switcher Dropdown (Anonymous / Privacy Protected) */}
         {activeUser && (
-          <div className="flex items-center gap-2 pl-2 border-l border-border/80">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700 text-xs font-bold text-slate-300 shadow-sm" title="Güvenli Oturum Aktif">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Oturum Açık</span>
-            </div>
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                className="px-2 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[11px] font-semibold transition-all cursor-pointer"
-                title="Oturumu Kapat"
-              >
-                Çıkış
-              </button>
-            )}
+          <div className="flex items-center gap-1.5 pl-2 border-l border-border/80">
+            <select
+              value={activeUser.id}
+              onChange={e => {
+                const { USERS } = require('@/lib/auth');
+                const target = USERS[e.target.value]?.profile;
+                if (target && onSwitchUser) {
+                  onSwitchUser(target);
+                }
+              }}
+              className="px-2.5 py-1 rounded-xl bg-slate-800/90 border border-slate-700 text-xs font-bold text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
+              title="Hesap Değiştir"
+            >
+              <option value="mehmet.sahin">🔒 Hesap 1</option>
+              <option value="salih.c">🔒 Hesap 2</option>
+              <option value="ilker.sahin">🔒 Hesap 3</option>
+            </select>
           </div>
         )}
       </div>

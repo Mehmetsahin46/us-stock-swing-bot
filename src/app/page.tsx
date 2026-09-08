@@ -37,7 +37,7 @@ import {
   manuallyClosePositionInMarket 
 } from '@/lib/portfolioManager';
 import { INITIAL_DUAL_STATE } from '@/lib/constants';
-import { UserProfile, AUTH_STORAGE_KEY } from '@/lib/auth';
+import { UserProfile, AUTH_STORAGE_KEY, USERS } from '@/lib/auth';
 import { 
   LayoutDashboard, 
   Radio, 
@@ -57,9 +57,8 @@ import {
 } from 'lucide-react';
 
 export default function HomePage() {
-  const [activeUser, setActiveUser] = useState<UserProfile | null>(null);
+  const [activeUser, setActiveUser] = useState<UserProfile>(USERS['mehmet.sahin'].profile);
   const [dualState, setDualState] = useState<DualPortfolioState>(INITIAL_DUAL_STATE);
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   const [activeMarket, setActiveMarket] = useState<MarketType>('BIST');
   const [scanResults, setScanResults] = useState<StockScanResult[]>([]);
@@ -137,7 +136,6 @@ export default function HomePage() {
         syncWithServer(u.id);
       }
     } catch (e) {}
-    setIsInitialized(true);
   }, [syncWithServer]);
 
   // Polling every 45 seconds for active user
@@ -159,11 +157,12 @@ export default function HomePage() {
   };
 
   const handleLogout = () => {
-    setActiveUser(null);
+    setActiveUser(USERS['mehmet.sahin'].profile);
     try {
       localStorage.removeItem(AUTH_STORAGE_KEY);
     } catch (e) {}
-    setDualState(INITIAL_DUAL_STATE);
+    syncWithServer('mehmet.sahin');
+    showToast('Hesap 1 oturumuna geçildi.');
   };
 
   // Open position from signal
@@ -287,13 +286,6 @@ export default function HomePage() {
         ? (dualState.crypto || INITIAL_DUAL_STATE.crypto!) 
         : dualState.us;
 
-  if (!isInitialized) return null;
-
-  // Render LoginScreen if not authenticated
-  if (!activeUser) {
-    return <LoginScreen onLoginSuccess={handleLogin} />;
-  }
-
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-primary-500 selection:text-white">
       {/* Toast Notification */}
@@ -318,6 +310,7 @@ export default function HomePage() {
         onOpenSecurity={() => setSecurityModalOpen(true)}
         activeUser={activeUser}
         onLogout={handleLogout}
+        onSwitchUser={handleLogin}
         lastScanTime={dualState.lastScanTime}
         activeMarket={activeMarket}
         onSelectMarket={setActiveMarket}
